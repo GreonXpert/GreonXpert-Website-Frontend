@@ -1,6 +1,6 @@
 // src/theme/typography.js
 const typography = {
-  fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+  fontFamily: '"Poppins", "Inter", "Roboto", "Helvetica", "Arial", sans-serif',
   h1: {
     fontWeight: 700,
     fontSize: '2.5rem',
@@ -12,7 +12,7 @@ const typography = {
     lineHeight: 1.3,
   },
   h3: {
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: '1.75rem',
     lineHeight: 1.3,
   },
@@ -40,7 +40,7 @@ const typography = {
     lineHeight: 1.5,
   },
   subtitle1: {
-    fontSize: '1rem',
+    fontSize: '1.125rem',
     fontWeight: 500,
     lineHeight: 1.5,
   },

@@ -1,15 +1,15 @@
 // src/theme/palette.js
 const palette = {
   primary: {
-    main: '#4a90e2',
-    light: '#7eb3ff',
-    dark: '#0d56a6',
+    main: '#1AC99F', // Turquoise color from the image
+    light: '#4EDCB9',
+    dark: '#0E9A78',
     contrastText: '#ffffff',
   },
   secondary: {
-    main: '#50b07e',
-    light: '#84e3ae',
-    dark: '#008051',
+    main: '#2E8B8B', // Teal shade
+    light: '#4AA7A7',
+    dark: '#1E6565',
     contrastText: '#ffffff',
   },
   error: {
@@ -50,11 +50,13 @@ const palette = {
   background: {
     default: '#f8f9fa',
     paper: '#ffffff',
+    login: 'linear-gradient(135deg, rgba(30, 101, 101, 0.95) 0%, rgba(26, 201, 159, 0.85) 100%)',
   },
   text: {
     primary: '#212529',
     secondary: '#6c757d',
     disabled: '#adb5bd',
+    contrast: '#ffffff',
   },
   divider: '#e9ecef',
 };

@@ -12,10 +12,10 @@ import {
   DialogTitle,
   Button,
 } from '@mui/material';
-import { LockOutlined as LockIcon } from '@mui/icons-material';
 import LoginForm from '../components/auth/LoginForm';
 import OtpVerification from '../components/auth/OtpVerification';
 import { clearSuccessMessage } from '../store/slices/authSlice';
+import loginBackground from '../assests/images/LoginBackground.jpg'; // Adjust the path as necessary
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -61,58 +61,73 @@ const Login = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'background.default',
-        py: 4,
-        backgroundImage: 'linear-gradient(135deg, rgba(74, 144, 226, 0.05) 0%, rgba(80, 176, 126, 0.05) 100%)',
+        position: 'relative',
+        overflow: 'hidden',
       }}
     >
-      <Container maxWidth="sm">
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            mb: 4,
-          }}
-        >
-          <Box
-            sx={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              bgcolor: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mb: 2,
-            }}
-          >
-            <LockIcon sx={{ fontSize: 32, color: 'primary.contrastText' }} />
-          </Box>
-          <Typography variant="h4" component="h1" fontWeight="bold" textAlign="center" mb={1}>
-            GreonXpert Admin
-          </Typography>
-          <Typography variant="body1" color="text.secondary" mb={4} textAlign="center">
-            Log in to access the admin dashboard
-          </Typography>
+      {/* Background image with overlay */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: `url(${loginBackground})`, // Fixed syntax here
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          zIndex: 0,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: (theme) => `linear-gradient(80deg, ${theme.palette.primary.light}CC 0%, ${theme.palette.secondary.dark}BB 20%)`,
+            zIndex: 1,
+          },
+        }}
+      />
 
-          {step === 'email' ? (
-            <LoginForm onOtpSent={handleOtpSent} />
-          ) : (
-            <OtpVerification email={email} onBack={handleBack} />
-          )}
-        </Box>
+      <Container 
+        maxWidth="sm" 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          position: 'relative',
+          zIndex: 2,
+        }}
+      >
+        {step === 'email' ? (
+          <LoginForm onOtpSent={handleOtpSent} />
+        ) : (
+          <OtpVerification email={email} onBack={handleBack} />
+        )}
       </Container>
 
       {/* Success Dialog */}
       <Dialog open={successDialogOpen} onClose={handleDialogClose}>
-        <DialogTitle>Login Successful</DialogTitle>
+        <DialogTitle 
+          sx={{ 
+            bgcolor: 'primary.main', 
+            color: 'white',
+            pb: 1
+          }}
+        >
+          Login Successful
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>
+          <DialogContentText sx={{ pt: 2 }}>
             You have successfully logged in to the GreonXpert Admin Dashboard.
           </DialogContentText>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-            <Button onClick={handleDialogClose} color="primary" variant="contained">
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+            <Button 
+              onClick={handleDialogClose} 
+              color="primary" 
+              variant="contained"
+              sx={{ borderRadius: 30, px: 3 }}
+            >
               Continue to Dashboard
             </Button>
           </Box>

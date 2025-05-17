@@ -9,6 +9,7 @@ import Components from './pages/Components';
 import Settings from './pages/Settings';
 import NotFound from './pages/Notfound';
 import Layout from './components/layout/Layout';
+import Home from './pages/Home';
 
 // Protected route component that requires authentication
 const ProtectedRoute = ({ children }) => {
@@ -44,6 +45,15 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Pages />
+          </ProtectedRoute>
+        }
+      />
+       {/* New Home route */}
+      <Route
+        path="/home"
+        element={
+          <ProtectedRoute>
+            <Home />
           </ProtectedRoute>
         }
       />

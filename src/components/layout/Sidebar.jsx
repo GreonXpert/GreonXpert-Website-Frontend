@@ -24,10 +24,12 @@ import {
   ChevronLeft as ChevronLeftIcon,
   Article as ArticleIcon,
   Edit as EditIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleSidebar } from '../../store/slices/uiSlice';
+import logo from '../../assests/images/logo.jpg'; // Adjust the path as necessary
 
 // Define drawer sizes
 const DRAWER_WIDTH = 280;
@@ -69,6 +71,11 @@ const Sidebar = () => {
       text: 'Dashboard',
       icon: <DashboardIcon />,
       path: '/dashboard',
+    },
+     {
+      text: 'Home',
+      icon: <HomeIcon />,
+      path: '/home',
     },
     {
       text: 'Pages',
@@ -126,7 +133,7 @@ const Sidebar = () => {
         }}
       >
         {sidebarOpen && (
-          <Box component="img" src="/assets/images/logo.png" alt="Logo" sx={{ height: 32 }} />
+          <Box component="img" src={logo} alt="Logo" sx={{ height: 32 }} />
         )}
         {!isMobile && (
           <IconButton onClick={() => dispatch(toggleSidebar())}>

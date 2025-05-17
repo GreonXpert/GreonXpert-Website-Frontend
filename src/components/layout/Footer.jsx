@@ -14,7 +14,7 @@ const Footer = () => {
     <Box
       component="footer"
       sx={{
-        py: 1.5,
+        py: 1.8,
         px: 3,
         bgcolor: 'background.paper', // You mentioned red color in your previous message
         borderTop: '1px solid',
