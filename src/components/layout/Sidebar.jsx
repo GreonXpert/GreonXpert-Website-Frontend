@@ -30,7 +30,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { toggleSidebar } from '../../store/slices/uiSlice';
 
 // Define drawer sizes
-const DRAWER_WIDTH = 240;
+const DRAWER_WIDTH = 280;
 const DRAWER_COLLAPSED_WIDTH = 64;
 
 const Sidebar = () => {
@@ -253,6 +253,7 @@ const Sidebar = () => {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: DRAWER_WIDTH,
+              zIndex: (theme) => theme.zIndex.drawer,
             },
           }}
         >
@@ -266,9 +267,13 @@ const Sidebar = () => {
           sx={{
             display: { xs: 'none', md: 'block' },
             '& .MuiDrawer-paper': {
+              position: 'fixed',
               boxSizing: 'border-box',
               width: sidebarOpen ? DRAWER_WIDTH : DRAWER_COLLAPSED_WIDTH,
               overflowX: 'hidden',
+              borderRight: '1px solid',
+              borderColor: 'divider',
+              zIndex: (theme) => theme.zIndex.drawer,
               transition: theme.transitions.create('width', {
                 easing: theme.transitions.easing.sharp,
                 duration: theme.transitions.duration.enteringScreen,

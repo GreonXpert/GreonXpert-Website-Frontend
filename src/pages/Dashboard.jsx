@@ -6,6 +6,14 @@ import { useSelector } from 'react-redux';
 const Dashboard = () => {
   const { user } = useSelector((state) => state.auth);
 
+  // Define the stats data to match your screenshot
+  const statsData = [
+    { label: 'Pages', value: '0', color: 'primary.main' },
+    { label: 'Components', value: '19', color: 'primary.main' },
+    { label: 'Users', value: '55', color: 'primary.main' },
+    { label: 'Media', value: '3', color: 'primary.main' },
+  ];
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ mb: 4 }}>
@@ -13,13 +21,13 @@ const Dashboard = () => {
           Dashboard
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Welcome back, {user?.name || 'Admin'}! Here's what's happening with your website.
+          Welcome back, Admin! Here's what's happening with your website.
         </Typography>
       </Box>
 
       <Grid container spacing={3}>
         {/* Stats Cards */}
-        {['Pages', 'Components', 'Users', 'Media'].map((item, index) => (
+        {statsData.map((stat, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
             <Paper
               sx={{
@@ -30,13 +38,13 @@ const Dashboard = () => {
                 flexDirection: 'column',
                 justifyContent: 'center',
               }}
-              elevation={2}
+              elevation={1}
             >
-              <Typography variant="h3" component="div" fontWeight="bold" color="primary">
-                {Math.floor(Math.random() * 100)}
+              <Typography variant="h3" component="div" fontWeight="bold" color={stat.color}>
+                {stat.value}
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                Total {item}
+                Total {stat.label}
               </Typography>
             </Paper>
           </Grid>
@@ -44,7 +52,7 @@ const Dashboard = () => {
 
         {/* Recent Activity */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }} elevation={2}>
+          <Paper sx={{ p: 3, height: '100%' }} elevation={1}>
             <Typography variant="h6" gutterBottom fontWeight="bold">
               Recent Activity
             </Typography>
@@ -56,7 +64,7 @@ const Dashboard = () => {
 
         {/* Quick Actions */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: '100%' }} elevation={2}>
+          <Paper sx={{ p: 3, height: '100%' }} elevation={1}>
             <Typography variant="h6" gutterBottom fontWeight="bold">
               Quick Actions
             </Typography>

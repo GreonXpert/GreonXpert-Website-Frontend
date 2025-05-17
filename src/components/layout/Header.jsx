@@ -5,7 +5,6 @@ import {
   Toolbar,
   IconButton,
   Typography,
-  Button,
   Box,
   useMediaQuery,
   Avatar,
@@ -31,7 +30,7 @@ import { logout } from '../../store/slices/authSlice';
 const Header = () => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const { user } = useSelector((state) => state.auth);
-  const { darkMode } = useSelector((state) => state.ui);
+  const { darkMode, sidebarOpen } = useSelector((state) => state.ui); // Added sidebarOpen
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -58,15 +57,19 @@ const Header = () => {
 
   return (
     <AppBar
-      position="sticky"
+      position="fixed"
       color="default"
       elevation={1}
       sx={{
+        width: { md: `calc(100% - ${isMobile ? 0 : (sidebarOpen ? '280px' : '64px')})` },
+        ml: { md: isMobile ? 0 : (sidebarOpen ? '280px' : '64px') },
         bgcolor: 'background.paper',
         color: 'text.primary',
         borderBottom: '1px solid',
         borderColor: 'divider',
-        zIndex: (theme) => theme.zIndex.drawer - 1,
+        zIndex: (theme) => theme.zIndex.drawer + 1,
+        boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.08)',
+        transition: 'width 225ms cubic-bezier(0.4, 0, 0.6, 1), margin 225ms cubic-bezier(0.4, 0, 0.6, 1)'
       }}
     >
       <Toolbar>
