@@ -10,6 +10,7 @@ import Settings from './pages/Settings';
 import NotFound from './pages/Notfound';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
+import Emissions from './pages/Emissions';
 
 // Protected route component that requires authentication
 const ProtectedRoute = ({ children }) => {
@@ -48,12 +49,21 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-       {/* New Home route */}
+      {/* New Home route */}
       <Route
         path="/home"
         element={
           <ProtectedRoute>
             <Home />
+          </ProtectedRoute>
+        }
+      />
+      {/* Emissions Dashboard route */}
+      <Route
+        path="/emissions"
+        element={
+          <ProtectedRoute>
+            <Emissions />
           </ProtectedRoute>
         }
       />

@@ -25,6 +25,7 @@ import {
   Article as ArticleIcon,
   Edit as EditIcon,
   Home as HomeIcon,
+  ShowChart as ShowChartIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -72,11 +73,12 @@ const Sidebar = () => {
       icon: <DashboardIcon />,
       path: '/dashboard',
     },
-     {
+    {
       text: 'Home',
       icon: <HomeIcon />,
       path: '/home',
     },
+    
     {
       text: 'Pages',
       icon: <PagesIcon />,
@@ -101,16 +103,18 @@ const Sidebar = () => {
       hasSubmenu: true,
       key: 'components',
       submenu: [
+        
         {
           text: 'All Components',
           icon: <ArticleIcon />,
           path: '/components',
         },
         {
-          text: 'Add New',
-          icon: <EditIcon />,
-          path: '/components/new',
-        },
+      text: 'Emissions',
+      icon: <ShowChartIcon />,
+      path: '/emissions',
+    },
+        
       ],
     },
     {
