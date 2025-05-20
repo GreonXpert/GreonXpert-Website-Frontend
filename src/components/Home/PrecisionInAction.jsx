@@ -1,5 +1,5 @@
-// src/components/Home/PrecisionInAction.jsx
-import React, { useState } from 'react';
+// src/components/Home/PrecisionInAction.jsx - Enhanced with Backend Integration
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -11,12 +11,12 @@ import {
   Card,
   CardContent,
   Divider,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Link
+  Link,
+  CircularProgress
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -25,13 +25,19 @@ import {
   Rocket as RocketIcon,
   ArrowForward as ArrowForwardIcon
 } from '@mui/icons-material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchContentBySection, updateSectionContent } from '../../store/slices/contentSlice';
 
 const PrecisionInAction = () => {
+  const dispatch = useDispatch();
+  const { sections, loading } = useSelector((state) => state.content);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [currentFeature, setCurrentFeature] = useState(null);
   
-  const [data, setData] = useState({
+  // Default data structure
+  const defaultData = {
     title: "Precision in Action",
     features: [
       {
@@ -59,9 +65,10 @@ const PrecisionInAction = () => {
         linkUrl: "/program"
       }
     ]
-  });
-  
-  const [tempData, setTempData] = useState({...data});
+  };
+
+  const [data, setData] = useState(defaultData);
+  const [tempData, setTempData] = useState(defaultData);
   const [tempFeature, setTempFeature] = useState({
     id: null,
     icon: "",
@@ -70,19 +77,44 @@ const PrecisionInAction = () => {
     linkText: "",
     linkUrl: ""
   });
-  
+
+  // Fetch content on component mount
+  useEffect(() => {
+    dispatch(fetchContentBySection('precisionInAction'));
+  }, [dispatch]);
+
+  // Update local state when content is fetched
+  useEffect(() => {
+    if (sections.precisionInAction) {
+      setData(sections.precisionInAction);
+      setTempData(sections.precisionInAction);
+    }
+  }, [sections.precisionInAction]);
+
   // Toggle edit mode
-  const handleEditToggle = () => {
+  const handleEditToggle = async () => {
     if (isEditing) {
       // Save changes
-      setData({...tempData});
+      setIsSaving(true);
+      try {
+        await dispatch(updateSectionContent({
+          section: 'precisionInAction',
+          content: tempData
+        })).unwrap();
+        setData(tempData);
+        setIsEditing(false);
+      } catch (error) {
+        console.error('Failed to save precision in action content:', error);
+      } finally {
+        setIsSaving(false);
+      }
     } else {
       // Start editing
-      setTempData({...data});
+      setTempData(data);
+      setIsEditing(true);
     }
-    setIsEditing(!isEditing);
   };
-  
+
   // Handle text input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -91,7 +123,7 @@ const PrecisionInAction = () => {
       [name]: value
     }));
   };
-  
+
   // Handle feature input changes
   const handleFeatureChange = (e) => {
     const { name, value } = e.target;
@@ -100,14 +132,14 @@ const PrecisionInAction = () => {
       [name]: value
     }));
   };
-  
+
   // Open dialog to edit a feature
   const handleOpenFeatureDialog = (feature) => {
     setCurrentFeature(feature);
     setTempFeature({...feature});
     setOpenDialog(true);
   };
-  
+
   // Save feature changes
   const handleSaveFeature = () => {
     setTempData(prev => ({
@@ -118,13 +150,13 @@ const PrecisionInAction = () => {
     }));
     setOpenDialog(false);
   };
-  
+
   // Cancel editing
   const handleCancel = () => {
-    setTempData({...data});
+    setTempData(data);
     setIsEditing(false);
   };
-  
+
   // Render icon based on icon name
   const renderIcon = (iconName, size = 'medium') => {
     switch(iconName) {
@@ -139,6 +171,14 @@ const PrecisionInAction = () => {
     }
   };
 
+  if (loading && !data.title) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box component="section" sx={{ 
       py: 10, 
@@ -152,10 +192,11 @@ const PrecisionInAction = () => {
           <Button 
             variant="contained" 
             color={isEditing ? "success" : "primary"}
-            startIcon={<EditIcon />}
+            startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : <EditIcon />}
             onClick={handleEditToggle}
+            disabled={isSaving}
           >
-            {isEditing ? "Save Changes" : "Edit Section"}
+            {isSaving ? "Saving..." : isEditing ? "Save Changes" : "Edit Section"}
           </Button>
           {isEditing && (
             <Button 
@@ -163,6 +204,7 @@ const PrecisionInAction = () => {
               color="error" 
               onClick={handleCancel}
               sx={{ ml: 1 }}
+              disabled={isSaving}
             >
               Cancel
             </Button>

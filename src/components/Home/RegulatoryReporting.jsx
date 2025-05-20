@@ -1,5 +1,5 @@
 // src/components/Home/RegulatoryReporting.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -24,29 +24,74 @@ import {
   ShowChart as ShowChartIcon,
   AutoGraph as AutoGraphIcon
 } from '@mui/icons-material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchContentBySection, updateSectionContent } from '../../store/slices/contentSlice';
 
 const RegulatoryReporting = () => {
   const theme = useTheme();
+  const dispatch = useDispatch();
+  
+  // Get content state from Redux
+  const { sections, loading } = useSelector((state) => state.content);
+  const regulatoryContent = sections.regulatoryReporting || {};
+  
   const [isEditing, setIsEditing] = useState(false);
   
-  const [data, setData] = useState({
+  // Default data structure
+  const defaultData = {
     microHeading: "GLOBAL CLIMATE COMPLIANCE",
     mainHeading: "Reporting Made Effortless",
     subHeading: "Report with confidence every time. Our tools—designed by engineers, climate scientists, and data experts— help leading companies stay ahead of climate disclosure and evolving regulations."
+  };
+  
+  // Current data from backend or default
+  const [data, setData] = useState({
+    ...defaultData,
+    ...regulatoryContent
   });
   
-  const [tempData, setTempData] = useState({...data});
+  // Temporary data for editing
+  const [tempData, setTempData] = useState(data);
+  
+  // Load content from backend on component mount
+  useEffect(() => {
+    dispatch(fetchContentBySection('regulatoryReporting'));
+  }, [dispatch]);
+  
+  // Update local state when backend content changes
+  useEffect(() => {
+    if (regulatoryContent && Object.keys(regulatoryContent).length > 0) {
+      const updatedData = {
+        ...defaultData,
+        ...regulatoryContent
+      };
+      setData(updatedData);
+      setTempData(updatedData);
+    }
+  }, [regulatoryContent]);
   
   // Toggle edit mode
-  const handleEditToggle = () => {
+  const handleEditToggle = async () => {
     if (isEditing) {
-      // Save changes
-      setData({...tempData});
+      // Save changes to backend
+      try {
+        await dispatch(updateSectionContent({
+          section: 'regulatoryReporting',
+          content: tempData
+        })).unwrap();
+        
+        // Update local state with saved data
+        setData({...tempData});
+        setIsEditing(false);
+      } catch (error) {
+        console.error('Failed to save content:', error);
+        // You could show an error notification here
+      }
     } else {
       // Start editing
       setTempData({...data});
+      setIsEditing(true);
     }
-    setIsEditing(!isEditing);
   };
   
   // Handle text input changes
@@ -125,7 +170,7 @@ const RegulatoryReporting = () => {
 
       <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2 }}>
         {/* Admin Controls */}
-        <Box sx={{ position: 'absolute', top: 0, right: 20, zIndex: 10 }}>
+        <Box sx={{ position: 'absolute', top: 0, right: 40, zIndex: 10 }}>
           <Button 
             variant="contained" 
             sx={{ 
@@ -141,6 +186,7 @@ const RegulatoryReporting = () => {
             }}
             startIcon={<EditIcon />}
             onClick={handleEditToggle}
+            disabled={loading}
           >
             {isEditing ? "Save Changes" : "Edit Section"}
           </Button>
@@ -150,7 +196,6 @@ const RegulatoryReporting = () => {
               sx={{ 
                 ml: 1, 
                 borderColor: 'rgba(255,255,255,0.7)',
-                color: '#ffffff',
                 borderRadius: '28px',
                 '&:hover': {
                   borderColor: '#ffffff',
@@ -187,7 +232,7 @@ const RegulatoryReporting = () => {
               fullWidth
               label="Micro Heading"
               name="microHeading"
-              value={tempData.microHeading}
+              value={tempData.microHeading || ''}
               onChange={handleInputChange}
               variant="outlined"
               margin="normal"
@@ -203,7 +248,7 @@ const RegulatoryReporting = () => {
               fullWidth
               label="Main Heading"
               name="mainHeading"
-              value={tempData.mainHeading}
+              value={tempData.mainHeading || ''}
               onChange={handleInputChange}
               variant="outlined"
               margin="normal"
@@ -219,7 +264,7 @@ const RegulatoryReporting = () => {
               fullWidth
               label="Sub Heading"
               name="subHeading"
-              value={tempData.subHeading}
+              value={tempData.subHeading || ''}
               onChange={handleInputChange}
               variant="outlined"
               margin="normal"

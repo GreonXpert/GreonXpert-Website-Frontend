@@ -1,5 +1,5 @@
-// src/components/Home/Hero.jsx
-import React, { useState } from 'react';
+// src/components/Home/Hero.jsx - Enhanced with Backend Integration
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Container, 
@@ -8,29 +8,64 @@ import {
   Button, 
   Paper, 
   Grid,
-  Divider
+  Divider,
+  CircularProgress
 } from '@mui/material';
-import { Edit as EditIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Save as SaveIcon } from '@mui/icons-material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchContentBySection, updateSectionContent } from '../../store/slices/contentSlice';
 
 const Hero = () => {
+  const dispatch = useDispatch();
+  const { sections, loading } = useSelector((state) => state.content);
   const [isEditing, setIsEditing] = useState(false);
-  const [heroData, setHeroData] = useState({
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Initial data structure
+  const defaultHeroData = {
     microHeading: "INNOVATIVE SOLUTIONS",
     mainHeading: "Transforming Business Through Digital Excellence",
     tagLine: "Custom Software Development and Technology Consulting",
     subHeading: "Partner with us to drive innovation, optimize operations, and achieve sustainable growth with our expertise in custom software solutions."
-  });
-  const [tempData, setTempData] = useState({...heroData});
+  };
 
-  const handleEditToggle = () => {
+  const [heroData, setHeroData] = useState(defaultHeroData);
+  const [tempData, setTempData] = useState(defaultHeroData);
+
+  // Fetch content on component mount
+  useEffect(() => {
+    dispatch(fetchContentBySection('hero'));
+  }, [dispatch]);
+
+  // Update local state when content is fetched
+  useEffect(() => {
+    if (sections.hero) {
+      setHeroData(sections.hero);
+      setTempData(sections.hero);
+    }
+  }, [sections.hero]);
+
+  const handleEditToggle = async () => {
     if (isEditing) {
       // Save changes
-      setHeroData({...tempData});
+      setIsSaving(true);
+      try {
+        await dispatch(updateSectionContent({
+          section: 'hero',
+          content: tempData
+        })).unwrap();
+        setHeroData(tempData);
+        setIsEditing(false);
+      } catch (error) {
+        console.error('Failed to save hero content:', error);
+      } finally {
+        setIsSaving(false);
+      }
     } else {
       // Start editing
-      setTempData({...heroData});
+      setTempData(heroData);
+      setIsEditing(true);
     }
-    setIsEditing(!isEditing);
   };
 
   const handleInputChange = (e) => {
@@ -42,9 +77,17 @@ const Hero = () => {
   };
 
   const handleCancel = () => {
-    setTempData({...heroData});
+    setTempData(heroData);
     setIsEditing(false);
   };
+
+  if (loading && !heroData.mainHeading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box 
@@ -62,10 +105,11 @@ const Hero = () => {
           <Button 
             variant="contained" 
             color={isEditing ? "success" : "primary"}
-            startIcon={<EditIcon />}
+            startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : <EditIcon />}
             onClick={handleEditToggle}
+            disabled={isSaving}
           >
-            {isEditing ? "Save Changes" : "Edit Hero"}
+            {isSaving ? "Saving..." : isEditing ? "Save Changes" : "Edit Hero"}
           </Button>
           {isEditing && (
             <Button 
@@ -73,6 +117,7 @@ const Hero = () => {
               color="error" 
               onClick={handleCancel}
               sx={{ ml: 1 }}
+              disabled={isSaving}
             >
               Cancel
             </Button>

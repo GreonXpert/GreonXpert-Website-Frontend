@@ -1,5 +1,5 @@
 // src/components/Home/AdvisoryBoard.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -10,27 +10,46 @@ import {
   Button,
   Card,
   CardContent,
-  CardMedia,
   Divider,
   IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Avatar
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   Edit as EditIcon,
   PersonAdd as PersonAddIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Upload as UploadIcon,
+  Photo as PhotoIcon
 } from '@mui/icons-material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchContentBySection, updateSectionContent } from '../../store/slices/contentSlice';
+import { uploadImage } from '../../store/slices/imageSlice';
+import ImageWithFallback from '../common/ImageWithFallback';
+import { getFullImageUrl } from '../../services/imageHelper';
 
 const AdvisoryBoard = () => {
+  const dispatch = useDispatch();
+  const fileInputRef = useRef(null);
+  
+  // Get content and image state from Redux
+  const { sections, loading: contentLoading } = useSelector((state) => state.content);
+  const { loading: imageLoading } = useSelector((state) => state.images);
+  const advisoryContent = sections.advisoryBoard || {};
+  
   const [isEditing, setIsEditing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentMember, setCurrentMember] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
   
-  const [data, setData] = useState({
+  // Default data structure
+  const defaultData = {
     title: "Meet the GreonXpert Sustainability Advisory Board",
     subtitle: "Guided by Industry Pioneers",
     description: "Our expert advisory committee guides GreonXpert's platform evolution and rigorously vets our carbon and ESG methodologies. This ensures you rely on the most advanced, high-impact tools for emissions tracking, sustainability reporting, and strategic decarbonization.",
@@ -39,34 +58,37 @@ const AdvisoryBoard = () => {
         id: 1,
         name: "Dr. Sarah Johnson",
         title: "Climate Scientist, Stanford University",
-        photo: "/assets/images/advisors/advisor1.jpg",
         expertise: "Carbon Metrics & Methodology Validation"
       },
       {
         id: 2,
         name: "Michael Chen",
         title: "Former EPA Director",
-        photo: "/assets/images/advisors/advisor2.jpg",
         expertise: "Environmental Policy & Compliance"
       },
       {
         id: 3,
         name: "Dr. Aisha Patel",
         title: "Sustainability Economics Expert",
-        photo: "/assets/images/advisors/advisor3.jpg",
         expertise: "Carbon Markets & ESG Impact Analysis"
       },
       {
         id: 4,
         name: "Robert Garcia",
         title: "Former CSO, Fortune 500",
-        photo: "/assets/images/advisors/advisor4.jpg",
         expertise: "Corporate Sustainability Implementation"
       }
     ]
+  };
+  
+  // Current data from backend or default
+  const [data, setData] = useState({
+    ...defaultData,
+    ...advisoryContent
   });
   
-  const [tempData, setTempData] = useState({...data});
+  // Temporary data for editing
+  const [tempData, setTempData] = useState(data);
   const [tempMember, setTempMember] = useState({
     id: null,
     name: "",
@@ -75,16 +97,43 @@ const AdvisoryBoard = () => {
     expertise: ""
   });
   
+  // Load content from backend on component mount
+  useEffect(() => {
+    dispatch(fetchContentBySection('advisoryBoard'));
+  }, [dispatch]);
+  
+  // Update local state when backend content changes
+  useEffect(() => {
+  // only sync from backend when we're NOT editing
+  if (!isEditing && advisoryContent && Object.keys(advisoryContent).length > 0) {
+    const updatedData = { ...defaultData, ...advisoryContent };
+    setData(updatedData);
+    setTempData(updatedData);
+  }
+ }, [advisoryContent, isEditing]);
+  
   // Toggle edit mode
-  const handleEditToggle = () => {
+  const handleEditToggle = async () => {
     if (isEditing) {
-      // Save changes
-      setData({...tempData});
+      // Save changes to backend
+      try {
+        await dispatch(updateSectionContent({
+          section: 'advisoryBoard',
+          content: tempData
+        })).unwrap();
+        
+        // Update local state with saved data
+        setData({...tempData});
+        setIsEditing(false);
+      } catch (error) {
+        console.error('Failed to save content:', error);
+        // You could show an error notification here
+      }
     } else {
       // Start editing
       setTempData({...data});
+      setIsEditing(true);
     }
-    setIsEditing(!isEditing);
   };
   
   // Handle text input changes
@@ -103,15 +152,25 @@ const AdvisoryBoard = () => {
       ...prev,
       [name]: value
     }));
+    
+    // Update image preview if photo URL changed directly
+    if (name === 'photo' && value) {
+  // turn the relative URL into an absolute one
+  setImagePreview(getFullImageUrl(value));
+}
   };
   
   // Open dialog to add/edit a member
   const handleOpenDialog = (member = null) => {
-    if (member) {
-      // Edit existing member
-      setCurrentMember(member);
-      setTempMember({...member});
-    } else {
+   if (member) {
+  setCurrentMember(member);
+  setTempMember({ ...member });
+  // build a fully-qualified URL for the existing photo
+  const previewUrl = member.photo
+    ? getFullImageUrl(member.photo)
+    : '';
+  setImagePreview(previewUrl);
+}else {
       // Add new member
       setCurrentMember(null);
       setTempMember({
@@ -121,28 +180,65 @@ const AdvisoryBoard = () => {
         photo: "",
         expertise: ""
       });
+      setImagePreview('');
     }
+    setSelectedFile(null);
+    setUploadError(null);
     setDialogOpen(true);
   };
   
   // Save member
-  const handleSaveMember = () => {
+  const handleSaveMember = async () => {
+    let updatedMember = {...tempMember};
+    
+    // If there's a selected file, upload it first
+    if (selectedFile) {
+      try {
+        // Upload the image
+        const resultAction = await dispatch(uploadImage({
+          file: selectedFile,
+          category: 'advisors',
+          purpose: 'advisor_photo',
+          metadata: {
+            altText: `Photo of ${tempMember.name}`,
+            description: `Advisory board member - ${tempMember.name}`,
+            entityId: tempMember.id.toString()
+          }
+        })).unwrap();
+        
+        // Update the member's photo URL with the uploaded image URL
+        // Make sure to use the complete URL returned from the server
+        updatedMember.photo = resultAction.url;
+        
+      } catch (error) {
+        console.error("Upload error:", error);
+        setUploadError('Failed to upload image. Please try again.');
+        return;
+      }
+    }
+    
+    // Now save the member data
     if (currentMember) {
       // Update existing member
       setTempData(prev => ({
         ...prev,
         members: prev.members.map(m => 
-          m.id === currentMember.id ? tempMember : m
+          m.id === currentMember.id ? updatedMember : m
         )
       }));
     } else {
       // Add new member
       setTempData(prev => ({
         ...prev,
-        members: [...prev.members, tempMember]
+        members: [...prev.members, updatedMember]
       }));
     }
+    
+    // Close the dialog
     setDialogOpen(false);
+    setSelectedFile(null);
+    setImagePreview('');
+    setUploadError(null);
   };
   
   // Delete member
@@ -158,50 +254,40 @@ const AdvisoryBoard = () => {
     setTempData({...data});
     setIsEditing(false);
   };
-
-  // Generate avatar or photo for advisor
-  const renderAdvisorImage = (advisor) => {
-    if (advisor.photo) {
-      return (
-        <CardMedia
-          component="img"
-          height={140}
-          image={advisor.photo}
-          alt={advisor.name}
-          sx={{ objectFit: 'cover' }}
-        />
-      );
-    } else {
-      return (
-        <Box 
-          sx={{ 
-            height: 140, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            bgcolor: 'primary.light',
-            opacity: 0.7
-          }}
-        >
-          <Avatar 
-            sx={{ 
-              width: 80, 
-              height: 80,
-              bgcolor: 'primary.main', 
-              fontSize: '2rem'
-            }}
-          >
-            {advisor.name.split(' ').map(n => n[0]).join('')}
-          </Avatar>
-        </Box>
-      );
+  
+  // Handle photo upload button click
+  const handleUploadClick = () => {
+    fileInputRef.current.click();
+  };
+  
+  // Handle file selection
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      
+      // Create a preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+        // Clear any existing URL in the field since we'll be uploading a new image
+        setTempMember(prev => ({ ...prev, photo: '' }));
+      };
+      reader.readAsDataURL(file);
     }
   };
-
+const renderedCards = useMemo(() => 
+  (data.members || []).map(member => (
+    <Grid item xs={12} sm={6} md={3} key={member.id}>
+      {/* …conditional Box/img or ImageWithFallback… */}
+    </Grid>
+  ))
+, [data.members]);
   return (
     <Box component="section" sx={{ 
       py: 10, 
       bgcolor: 'background.default',
+      backgroundImage: 'linear-gradient(135deg, rgba(74, 144, 226, 0.05) 0%, rgba(80, 176, 126, 0.05) 100%)',
       position: 'relative',
       width: '100%'
     }}>
@@ -213,6 +299,7 @@ const AdvisoryBoard = () => {
             color={isEditing ? "success" : "primary"}
             startIcon={<EditIcon />}
             onClick={handleEditToggle}
+            disabled={contentLoading || imageLoading}
           >
             {isEditing ? "Save Changes" : "Edit Section"}
           </Button>
@@ -240,7 +327,7 @@ const AdvisoryBoard = () => {
               fullWidth
               label="Section Title"
               name="title"
-              value={tempData.title}
+              value={tempData.title || ''}
               onChange={handleInputChange}
               variant="outlined"
               margin="normal"
@@ -250,7 +337,7 @@ const AdvisoryBoard = () => {
               fullWidth
               label="Section Subtitle"
               name="subtitle"
-              value={tempData.subtitle}
+              value={tempData.subtitle || ''}
               onChange={handleInputChange}
               variant="outlined"
               margin="normal"
@@ -260,7 +347,7 @@ const AdvisoryBoard = () => {
               fullWidth
               label="Section Description"
               name="description"
-              value={tempData.description}
+              value={tempData.description || ''}
               onChange={handleInputChange}
               variant="outlined"
               margin="normal"
@@ -280,10 +367,35 @@ const AdvisoryBoard = () => {
             </Box>
             
             <Grid container spacing={3}>
-              {tempData.members.map((member) => (
+              {(tempData.members || []).map((member) => (
                 <Grid item xs={12} sm={6} md={3} key={member.id}>
                   <Card sx={{ height: '100%' }}>
-                    {renderAdvisorImage(member)}
+                   {member.photo ? (
+  <Box
+    component="img"
+    src={getFullImageUrl(member.photo)}
+    alt={member.name}
+    sx={{
+      width: '100%',
+      height: 140,
+      objectFit: 'cover',
+      borderTopLeftRadius: 2,
+      borderTopRightRadius: 2
+    }}
+    onError={(e) => {
+      e.target.onerror = null;
+      e.target.src = '/assets/images/default-advisor.png';
+    }}
+  />
+) : (
+  <ImageWithFallback 
+    src={member.photo} 
+    alt={member.name} 
+    name={member.name} 
+    height={140}
+  />
+)}
+
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
                         {member.name}
@@ -357,7 +469,7 @@ const AdvisoryBoard = () => {
           </Box>
           
           <Grid container spacing={3} justifyContent="center">
-            {data.members.map((member) => (
+            {(data.members || []).map((member) => (
               <Grid item xs={12} sm={6} md={3} key={member.id}>
                 <Card 
                   sx={{ 
@@ -369,7 +481,32 @@ const AdvisoryBoard = () => {
                     }
                   }}
                 >
-                  {renderAdvisorImage(member)}
+                {member.photo ? (
+  <Box
+    component="img"
+    src={getFullImageUrl(member.photo)}
+    alt={member.name}
+    sx={{
+      width: '100%',
+      height: 140,
+      objectFit: 'cover',
+      borderTopLeftRadius: 2,
+      borderTopRightRadius: 2
+    }}
+    onError={(e) => {
+      e.target.onerror = null;
+      e.target.src = '/assets/images/default-advisor.png';
+    }}
+  />
+) : (
+  <ImageWithFallback 
+    src={member.photo} 
+    alt={member.name} 
+    name={member.name} 
+    height={140}
+  />
+)}
+
                   <CardContent>
                     <Typography 
                       variant="h6" 
@@ -416,7 +553,7 @@ const AdvisoryBoard = () => {
             fullWidth
             label="Name"
             name="name"
-            value={tempMember.name}
+            value={tempMember.name || ''}
             onChange={handleMemberInputChange}
             variant="outlined"
             margin="normal"
@@ -427,29 +564,118 @@ const AdvisoryBoard = () => {
             fullWidth
             label="Title/Position"
             name="title"
-            value={tempMember.title}
+            value={tempMember.title || ''}
             onChange={handleMemberInputChange}
             variant="outlined"
             margin="normal"
             required
           />
           
-          <TextField
-            fullWidth
-            label="Photo URL"
-            name="photo"
-            value={tempMember.photo}
-            onChange={handleMemberInputChange}
-            variant="outlined"
-            margin="normal"
-            helperText="Leave blank to use initials avatar"
-          />
+          {/* Image Upload Section */}
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Photo
+            </Typography>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Button
+                variant="outlined"
+                startIcon={<UploadIcon />}
+                onClick={handleUploadClick}
+                sx={{ mr: 2 }}
+              >
+                Upload Photo
+              </Button>
+              
+              <TextField
+                fullWidth
+                label="Photo URL"
+                name="photo"
+                value={tempMember.photo || ''}
+                onChange={handleMemberInputChange}
+                variant="outlined"
+                size="small"
+                helperText="Leave blank to use initials avatar"
+              />
+              
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+                accept="image/*"
+              />
+            </Box>
+            
+            {/* Image Preview */}
+            {imagePreview && (
+              <Box sx={{ mb: 2, position: 'relative' }}>
+               <img
+                  src={
+                    imagePreview.startsWith('data:')
+                      ? imagePreview
+                      : getFullImageUrl(imagePreview)
+                  }
+                  
+                  alt="Preview"
+                  style={{ 
+                    width: '100%', 
+                    maxHeight: '200px', 
+                    objectFit: 'contain',
+                    borderRadius: '4px',
+                    border: '1px solid #ccc'
+                  }}
+                />
+                <Box sx={{ 
+                  position: 'absolute', 
+                  top: 8, 
+                  right: 8,
+                  bgcolor: 'background.paper',
+                  borderRadius: '50%'
+                }}>
+                  <IconButton 
+                    size="small" 
+                    onClick={() => {
+                      setImagePreview('');
+                      setSelectedFile(null);
+                      setTempMember(prev => ({ ...prev, photo: '' }));
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Box>
+            )}
+            
+            {!imagePreview && (
+              <Box 
+                sx={{ 
+                  width: '100%', 
+                  height: 100, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  bgcolor: 'grey.100',
+                  borderRadius: 1,
+                  mb: 2
+                }}
+              >
+                <PhotoIcon color="disabled" sx={{ fontSize: 40 }} />
+              </Box>
+            )}
+            
+            {uploadError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {uploadError}
+              </Alert>
+            )}
+          </Box>
           
           <TextField
             fullWidth
             label="Expertise Area"
             name="expertise"
-            value={tempMember.expertise}
+            value={tempMember.expertise || ''}
             onChange={handleMemberInputChange}
             variant="outlined"
             margin="normal"
@@ -462,9 +688,11 @@ const AdvisoryBoard = () => {
             onClick={handleSaveMember} 
             variant="contained" 
             color="primary"
-            disabled={!tempMember.name || !tempMember.title || !tempMember.expertise}
+            disabled={!tempMember.name || !tempMember.title || !tempMember.expertise || imageLoading}
           >
-            Save
+            {imageLoading ? 
+              <CircularProgress size={24} color="inherit" /> : 
+              "Save"}
           </Button>
         </DialogActions>
       </Dialog>

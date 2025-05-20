@@ -1,5 +1,5 @@
 // src/components/Home/SustainabilityStories.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -33,14 +33,23 @@ import {
   MenuBook as ResourceIcon,
   ArrowForward as ArrowIcon
 } from '@mui/icons-material';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchContentBySection, updateSectionContent } from '../../store/slices/contentSlice';
 
 const SustainabilityStories = () => {
+  const dispatch = useDispatch();
+  
+  // Get content state from Redux
+  const { sections, loading } = useSelector((state) => state.content);
+  const storiesContent = sections.sustainabilityStories || {};
+  
   const [isEditing, setIsEditing] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentStory, setCurrentStory] = useState(null);
   const [tabValue, setTabValue] = useState(0);
   
-  const [data, setData] = useState({
+  // Default data structure
+  const defaultData = {
     title: "Latest Sustainability Stories",
     subtitle: "Insights, news, and resources from our sustainability experts",
     categories: ["All", "Blog", "Video", "Resources"],
@@ -82,9 +91,16 @@ const SustainabilityStories = () => {
         link: "/blog/ai-decarbonization-strategy"
       }
     ]
+  };
+  
+  // Current data from backend or default
+  const [data, setData] = useState({
+    ...defaultData,
+    ...storiesContent
   });
   
-  const [tempData, setTempData] = useState({...data});
+  // Temporary data for editing
+  const [tempData, setTempData] = useState(data);
   const [tempStory, setTempStory] = useState({
     id: null,
     title: "",
@@ -95,21 +111,50 @@ const SustainabilityStories = () => {
     link: ""
   });
   
+  // Load content from backend on component mount
+  useEffect(() => {
+    dispatch(fetchContentBySection('sustainabilityStories'));
+  }, [dispatch]);
+  
+  // Update local state when backend content changes
+  useEffect(() => {
+    if (storiesContent && Object.keys(storiesContent).length > 0) {
+      const updatedData = {
+        ...defaultData,
+        ...storiesContent
+      };
+      setData(updatedData);
+      setTempData(updatedData);
+    }
+  }, [storiesContent]);
+  
   // Handle tab change
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
   
   // Toggle edit mode
-  const handleEditToggle = () => {
+  const handleEditToggle = async () => {
     if (isEditing) {
-      // Save changes
-      setData({...tempData});
+      // Save changes to backend
+      try {
+        await dispatch(updateSectionContent({
+          section: 'sustainabilityStories',
+          content: tempData
+        })).unwrap();
+        
+        // Update local state with saved data
+        setData({...tempData});
+        setIsEditing(false);
+      } catch (error) {
+        console.error('Failed to save content:', error);
+        // You could show an error notification here
+      }
     } else {
       // Start editing
       setTempData({...data});
+      setIsEditing(true);
     }
-    setIsEditing(!isEditing);
   };
   
   // Handle text input changes
@@ -161,7 +206,7 @@ const SustainabilityStories = () => {
       // Update existing story
       setTempData(prev => ({
         ...prev,
-        stories: prev.stories.map(s => 
+        stories: (prev.stories || []).map(s => 
           s.id === currentStory.id ? tempStory : s
         )
       }));
@@ -169,7 +214,7 @@ const SustainabilityStories = () => {
       // Add new story
       setTempData(prev => ({
         ...prev,
-        stories: [...prev.stories, tempStory]
+        stories: [...(prev.stories || []), tempStory]
       }));
     }
     setDialogOpen(false);
@@ -179,7 +224,7 @@ const SustainabilityStories = () => {
   const handleDeleteStory = (id) => {
     setTempData(prev => ({
       ...prev,
-      stories: prev.stories.filter(s => s.id !== id)
+      stories: (prev.stories || []).filter(s => s.id !== id)
     }));
   };
   
@@ -205,11 +250,14 @@ const SustainabilityStories = () => {
   
   // Filter stories by selected tab
   const getFilteredStories = () => {
-    const selectedCategory = data.categories[tabValue];
+    const categories = data.categories || defaultData.categories;
+    const stories = data.stories || [];
+    const selectedCategory = categories[tabValue];
+    
     if (selectedCategory === 'All') {
-      return data.stories;
+      return stories;
     } else {
-      return data.stories.filter(story => story.category === selectedCategory);
+      return stories.filter(story => story.category === selectedCategory);
     }
   };
 
@@ -228,6 +276,7 @@ const SustainabilityStories = () => {
             color={isEditing ? "success" : "primary"}
             startIcon={<EditIcon />}
             onClick={handleEditToggle}
+            disabled={loading}
           >
             {isEditing ? "Save Changes" : "Edit Section"}
           </Button>
@@ -255,7 +304,7 @@ const SustainabilityStories = () => {
               fullWidth
               label="Section Title"
               name="title"
-              value={tempData.title}
+              value={tempData.title || ''}
               onChange={handleInputChange}
               variant="outlined"
               margin="normal"
@@ -265,7 +314,7 @@ const SustainabilityStories = () => {
               fullWidth
               label="Section Subtitle"
               name="subtitle"
-              value={tempData.subtitle}
+              value={tempData.subtitle || ''}
               onChange={handleInputChange}
               variant="outlined"
               margin="normal"
@@ -283,7 +332,7 @@ const SustainabilityStories = () => {
             </Box>
             
             <Grid container spacing={3}>
-              {tempData.stories.map((story) => (
+              {(tempData.stories || []).map((story) => (
                 <Grid item xs={12} sm={6} md={3} key={story.id}>
                   <Card sx={{ height: '100%' }}>
                     {story.image ? (
@@ -401,7 +450,7 @@ const SustainabilityStories = () => {
                 },
               }}
             >
-              {data.categories.map((category) => (
+              {(data.categories || defaultData.categories).map((category) => (
                 <Tab 
                   key={category} 
                   label={category} 
@@ -571,7 +620,7 @@ const SustainabilityStories = () => {
             fullWidth
             label="Title"
             name="title"
-            value={tempStory.title}
+            value={tempStory.title || ''}
             onChange={handleStoryInputChange}
             variant="outlined"
             margin="normal"
@@ -582,7 +631,7 @@ const SustainabilityStories = () => {
             fullWidth
             label="Description"
             name="description"
-            value={tempStory.description}
+            value={tempStory.description || ''}
             onChange={handleStoryInputChange}
             variant="outlined"
             margin="normal"
@@ -596,7 +645,7 @@ const SustainabilityStories = () => {
             select
             label="Category"
             name="category"
-            value={tempStory.category}
+            value={tempStory.category || 'Blog'}
             onChange={handleStoryInputChange}
             variant="outlined"
             margin="normal"
@@ -604,7 +653,7 @@ const SustainabilityStories = () => {
               native: true
             }}
           >
-            {data.categories.filter(cat => cat !== 'All').map((category) => (
+            {(data.categories || defaultData.categories).filter(cat => cat !== 'All').map((category) => (
               <option key={category} value={category}>
                 {category}
               </option>
@@ -615,7 +664,7 @@ const SustainabilityStories = () => {
             fullWidth
             label="Image URL"
             name="image"
-            value={tempStory.image}
+            value={tempStory.image || ''}
             onChange={handleStoryInputChange}
             variant="outlined"
             margin="normal"
@@ -626,7 +675,7 @@ const SustainabilityStories = () => {
             fullWidth
             label="Date"
             name="date"
-            value={tempStory.date}
+            value={tempStory.date || ''}
             onChange={handleStoryInputChange}
             variant="outlined"
             margin="normal"
@@ -637,7 +686,7 @@ const SustainabilityStories = () => {
             fullWidth
             label="Link URL"
             name="link"
-            value={tempStory.link}
+            value={tempStory.link || ''}
             onChange={handleStoryInputChange}
             variant="outlined"
             margin="normal"

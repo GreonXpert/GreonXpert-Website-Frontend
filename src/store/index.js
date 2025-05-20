@@ -1,16 +1,18 @@
 // src/store/index.js
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
- import uiReducer from './slices/uiSlice';
- import notificationReducer from './slices/notificationSlice';
+import uiReducer from './slices/uiSlice';
+import notificationReducer from './slices/notificationSlice';
 import contentReducer from './slices/contentSlice';
+import imageReducer from './slices/imageSlice';
 
 const store = configureStore({
   reducer: {
     auth: authReducer,
-     ui: uiReducer,
+    ui: uiReducer,
     notifications: notificationReducer,
-     content: contentReducer,
+    content: contentReducer,
+    images: imageReducer,
   },
   devTools: process.env.NODE_ENV !== 'production',
 });
