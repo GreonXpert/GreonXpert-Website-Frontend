@@ -93,7 +93,7 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
     }
     
     // Numeric fields should be valid numbers
-    ['scope1', 'scope2', 'scope3', 'forecast', 'target', 'sbt', 'initiatives'].forEach(field => {
+    ['scope1', 'scope2', 'scope3'].forEach(field => {
       if (editFormData[field] !== '' && (isNaN(editFormData[field]) || editFormData[field] < 0)) {
         newErrors[field] = 'Must be a positive number';
       }

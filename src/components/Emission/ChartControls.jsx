@@ -8,14 +8,7 @@ function ChartControls({ title, startYear, endYear, chartType, onTitleChange, on
       <Grid container spacing={2} alignItems="center">
         {/* Chart Title Input */}
         <Grid item xs={12} md={4}>
-          <TextField 
-            label="Chart Title" 
-            value={title} 
-            onChange={(e) => onTitleChange(e.target.value)}
-            variant="outlined" 
-            size="small" 
-            fullWidth 
-          />
+        
         </Grid>
         {/* Start Year Selector */}
         <Grid item xs={6} md={3}>

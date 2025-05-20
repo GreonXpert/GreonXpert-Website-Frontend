@@ -12,14 +12,6 @@ import {
 function ChartRenderer({ title, chartType, data, toggles, seriesColors }) {
   const theme = useTheme();
 
-  // Debug logging to help troubleshoot rendering issues
-  console.log('ChartRenderer props:', { 
-    chartType, 
-    dataLength: data?.length, 
-    toggles, 
-    hasColors: !!seriesColors 
-  });
-
   // Early return if no data
   if (!data || data.length === 0) {
     return (
@@ -34,29 +26,46 @@ function ChartRenderer({ title, chartType, data, toggles, seriesColors }) {
   // Prepare data for Pie chart if needed (aggregate values by series)
   let pieData = [];
   if (chartType === 'pie') {
-    pieData = Object.keys(toggles)
-      .filter(key => toggles[key] && key !== 'year')  // include only toggled series (excluding any 'year' key)
-      .map(key => {
-        // Sum values for this series over the data range
-        const totalValue = data.reduce((sum, item) => sum + (Number(item[key]) || 0), 0);
-        return { name: formatSeriesName(key), value: totalValue };
-      })
-      .filter(item => item.value > 0);
+    // First, calculate the totals for each scope across all years
+    const totals = {};
+    
+    // Initialize totals for each series
+    Object.keys(toggles).forEach(key => {
+      if (toggles[key] && key !== 'year') {
+        totals[key] = 0;
+      }
+    });
+    
+    // Sum the values for each series across all years
+    data.forEach(yearData => {
+      Object.keys(totals).forEach(key => {
+        // Only add valid numeric values
+        if (yearData[key] !== undefined && yearData[key] !== null) {
+          totals[key] += Number(yearData[key]) || 0;
+        }
+      });
+    });
+    
+    // Convert totals to the format required by the Pie chart
+    pieData = Object.keys(totals)
+      .filter(key => totals[key] > 0) // Only include non-zero values
+      .map(key => ({
+        name: formatSeriesName(key),
+        value: totals[key],
+        key: key // Store the original key for color mapping
+      }));
   }
 
   // Helper to format series keys into human-readable names for chart legend/labels
-  const formatSeriesName = (key) => {
+  function formatSeriesName(key) {
     switch (key) {
       case 'scope1': return 'Scope 1';
       case 'scope2': return 'Scope 2';
       case 'scope3': return 'Scope 3';
-      case 'forecast': return 'Forecast';
-      case 'target': return 'Target';
-      case 'sbt': return 'SBT';
-      case 'initiatives': return 'Initiatives';
+      
       default: return key.charAt(0).toUpperCase() + key.slice(1);
     }
-  };
+  }
 
   // Common axes and grid styling for non-pie charts
   const renderAxes = () => (
@@ -78,14 +87,22 @@ function ChartRenderer({ title, chartType, data, toggles, seriesColors }) {
       scope1: '#1AC99F',
       scope2: '#2E8B8B', 
       scope3: '#3498db',
-      forecast: '#f39c12',
-      target: '#009a44',
-      sbt: '#e74c3c',
-      initiatives: '#6c757d'
+     
     };
     
     return defaultColors[key] || theme.palette.primary.main;
   };
+
+  // Define fallback colors for pie chart
+  const fallbackColors = [
+    theme.palette.primary.main,
+    theme.palette.secondary.main,
+    theme.palette.error.main,
+    theme.palette.warning.main,
+    theme.palette.info.main,
+    theme.palette.success.main,
+    theme.palette.grey[600]
+  ];
 
   // Depending on chartType, render the appropriate Recharts chart
   let chartContent;
@@ -97,10 +114,7 @@ function ChartRenderer({ title, chartType, data, toggles, seriesColors }) {
         {toggles.scope1 && <Line type="monotone" dataKey="scope1" name="Scope 1" stroke={getSeriesColor('scope1')} strokeWidth={2} dot={false} />}
         {toggles.scope2 && <Line type="monotone" dataKey="scope2" name="Scope 2" stroke={getSeriesColor('scope2')} strokeWidth={2} dot={false} />}
         {toggles.scope3 && <Line type="monotone" dataKey="scope3" name="Scope 3" stroke={getSeriesColor('scope3')} strokeWidth={2} dot={false} />}
-        {toggles.forecast && <Line type="monotone" dataKey="forecast" name="Forecast" stroke={getSeriesColor('forecast')} strokeDasharray="4 2" />}
-        {toggles.target && <Line type="monotone" dataKey="target" name="Target" stroke={getSeriesColor('target')} strokeDasharray="5 5" />}
-        {toggles.sbt && <Line type="monotone" dataKey="sbt" name="SBT" stroke={getSeriesColor('sbt')} strokeWidth={2} />}
-        {toggles.initiatives && <Line type="monotone" dataKey="initiatives" name="Initiatives" stroke={getSeriesColor('initiatives')} strokeWidth={2} />}
+        
       </LineChart>
     );
   } else if (chartType === 'area') {
@@ -111,10 +125,7 @@ function ChartRenderer({ title, chartType, data, toggles, seriesColors }) {
         {toggles.scope1 && <Area type="monotone" dataKey="scope1" name="Scope 1" stroke={getSeriesColor('scope1')} fill={getSeriesColor('scope1')} fillOpacity={0.3} />}
         {toggles.scope2 && <Area type="monotone" dataKey="scope2" name="Scope 2" stroke={getSeriesColor('scope2')} fill={getSeriesColor('scope2')} fillOpacity={0.3} />}
         {toggles.scope3 && <Area type="monotone" dataKey="scope3" name="Scope 3" stroke={getSeriesColor('scope3')} fill={getSeriesColor('scope3')} fillOpacity={0.3} />}
-        {toggles.forecast && <Area type="monotone" dataKey="forecast" name="Forecast" stroke={getSeriesColor('forecast')} fill={getSeriesColor('forecast')} fillOpacity={0.2} strokeDasharray="4 2" />}
-        {toggles.target && <Line type="monotone" dataKey="target" name="Target" stroke={getSeriesColor('target')} strokeDasharray="5 5" />}
-        {toggles.sbt && <Area type="monotone" dataKey="sbt" name="SBT" stroke={getSeriesColor('sbt')} fill={getSeriesColor('sbt')} fillOpacity={0.3} />}
-        {toggles.initiatives && <Area type="monotone" dataKey="initiatives" name="Initiatives" stroke={getSeriesColor('initiatives')} fill={getSeriesColor('initiatives')} fillOpacity={0.3} />}
+        
       </AreaChart>
     );
   } else if (chartType === 'bar') {
@@ -125,47 +136,47 @@ function ChartRenderer({ title, chartType, data, toggles, seriesColors }) {
         {toggles.scope1 && <Bar dataKey="scope1" name="Scope 1" fill={getSeriesColor('scope1')} />}
         {toggles.scope2 && <Bar dataKey="scope2" name="Scope 2" fill={getSeriesColor('scope2')} />}
         {toggles.scope3 && <Bar dataKey="scope3" name="Scope 3" fill={getSeriesColor('scope3')} />}
-        {toggles.forecast && <Bar dataKey="forecast" name="Forecast" fill={getSeriesColor('forecast')} />}
-        {toggles.sbt && <Bar dataKey="sbt" name="SBT" fill={getSeriesColor('sbt')} />}
-        {toggles.initiatives && <Bar dataKey="initiatives" name="Initiatives" fill={getSeriesColor('initiatives')} />}
-        {toggles.target && 
-          <Line 
-            type="monotone" 
-            dataKey="target" 
-            name="Target" 
-            stroke={getSeriesColor('target')} 
-            strokeDasharray="5 5" 
-            legendType="line"   // show target in legend as line
-          />
-        }
+       
+      
       </BarChart>
     );
   } else if (chartType === 'pie') {
-    chartContent = (
-      <PieChart>
-        <Tooltip />
-        <Legend />
-        <Pie 
-          data={pieData} 
-          dataKey="value" 
-          nameKey="name" 
-          cx="50%" cy="50%" 
-          outerRadius={80} 
-          label 
-        >
-          {pieData.map((entry, index) => {
-            // Convert entry name to the key format (lowercase)
-            const key = entry.name.toLowerCase().replace(/\s+/g, '');
-            return (
+    // Check if we have data to display
+    if (pieData.length === 0) {
+      chartContent = (
+        <Box sx={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Typography variant="body1" color="text.secondary">
+            No data to display. Please enable at least one data series.
+          </Typography>
+        </Box>
+      );
+    } else {
+      chartContent = (
+        <PieChart>
+          <Tooltip formatter={(value) => [`${Math.round(value)} tCO₂e`, null]} />
+          <Legend />
+          <Pie 
+            data={pieData} 
+            dataKey="value" 
+            nameKey="name" 
+            cx="50%" 
+            cy="50%" 
+            outerRadius={130}
+            innerRadius={0}
+            paddingAngle={1}
+            label={(entry) => `${entry.name}: ${Math.round(entry.value)}`}
+            labelLine={true}
+          >
+            {pieData.map((entry, index) => (
               <Cell 
                 key={`cell-${index}`} 
-                fill={getSeriesColor(key)} 
+                fill={getSeriesColor(entry.key) || fallbackColors[index % fallbackColors.length]}
               />
-            );
-          })}
-        </Pie>
-      </PieChart>
-    );
+            ))}
+          </Pie>
+        </PieChart>
+      );
+    }
   } else if (chartType === 'composed') {
     chartContent = (
       <ComposedChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -174,10 +185,7 @@ function ChartRenderer({ title, chartType, data, toggles, seriesColors }) {
         {toggles.scope1 && <Bar dataKey="scope1" name="Scope 1" fill={getSeriesColor('scope1')} />}
         {toggles.scope2 && <Bar dataKey="scope2" name="Scope 2" fill={getSeriesColor('scope2')} />}
         {toggles.scope3 && <Bar dataKey="scope3" name="Scope 3" fill={getSeriesColor('scope3')} />}
-        {toggles.forecast && <Line type="monotone" dataKey="forecast" name="Forecast" stroke={getSeriesColor('forecast')} strokeDasharray="4 2" />}
-        {toggles.target && <Line type="monotone" dataKey="target" name="Target" stroke={getSeriesColor('target')} strokeDasharray="5 5" />}
-        {toggles.sbt && <Line type="monotone" dataKey="sbt" name="SBT" stroke={getSeriesColor('sbt')} />}
-        {toggles.initiatives && <Area type="monotone" dataKey="initiatives" name="Initiatives" stroke={getSeriesColor('initiatives')} fill={getSeriesColor('initiatives')} fillOpacity={0.3} />}
+     
       </ComposedChart>
     );
   } else {

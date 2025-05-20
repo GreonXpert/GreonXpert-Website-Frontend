@@ -6,22 +6,28 @@ import ChartControls from '../Emission/ChartControls';
 import DataToggles from '../Emission/DataToggles';
 import EmissionsStats from '../Emission/EmissionsStats';
 import ChartRenderer from '../Emission/ChartRenderer';
-import AdvancedSettingsPanel from '../Emission/AdvancedSettingsPanel';
 
 // Sample data to use when no data is provided
 const SAMPLE_DATA = [
-  { year: 2015, scope1: 250, scope2: 300, scope3: 450, target: 1000 },
-  { year: 2016, scope1: 240, scope2: 280, scope3: 430, target: 950 },
-  { year: 2017, scope1: 230, scope2: 270, scope3: 410, target: 900 },
-  { year: 2018, scope1: 200, scope2: 250, scope3: 400, target: 850 },
-  { year: 2019, scope1: 180, scope2: 230, scope3: 390, target: 800 },
-  { year: 2020, scope1: 160, scope2: 210, scope3: 380, target: 750 },
-  { year: 2021, scope1: 150, scope2: 190, scope3: 360, target: 700 },
-  { year: 2022, scope1: 140, scope2: 180, scope3: 340, target: 650 },
-  { year: 2023, scope1: 130, scope2: 170, scope3: 320, forecast: 620, target: 600 },
-  { year: 2024, scope1: 120, scope2: 160, scope3: 310, forecast: 590, target: 550 },
-  { year: 2025, scope1: 110, scope2: 150, scope3: 300, forecast: 560, target: 500, sbt: 550, initiatives: 520 }
+  { year: 2015, scope1: 250, scope2: 300, scope3: 450, },
+  { year: 2016, scope1: 240, scope2: 280, scope3: 430,  },
+  { year: 2017, scope1: 230, scope2: 270, scope3: 410,  },
+  { year: 2018, scope1: 200, scope2: 250, scope3: 400,  },
+  { year: 2019, scope1: 180, scope2: 230, scope3: 390, },
+  { year: 2020, scope1: 160, scope2: 210, scope3: 380,  },
+  { year: 2021, scope1: 150, scope2: 190, scope3: 360,  },
+  { year: 2022, scope1: 140, scope2: 180, scope3: 340,  },
+  { year: 2023, scope1: 130, scope2: 170, scope3: 320,  },
+  { year: 2024, scope1: 120, scope2: 160, scope3: 310,  },
+  { year: 2025, scope1: 110, scope2: 150, scope3: 300,  }
 ];
+
+// Fixed colors for the chart
+const FIXED_SERIES_COLORS = {
+  scope1: '#1AC99F', // Green
+  scope2: '#2E8B8B', // Teal
+  scope3: '#3498db', // Blue
+};
 
 function EmissionsChart({ data = SAMPLE_DATA }) {
   const theme = useTheme();
@@ -37,22 +43,7 @@ function EmissionsChart({ data = SAMPLE_DATA }) {
     scope1: true,
     scope2: true,
     scope3: true,
-    forecast: false,
-    target: false,
-    sbt: false,
-    initiatives: false,
   });
-
-  // State for custom series colors (initialized from theme palette)
-  const [seriesColors, setSeriesColors] = useState(() => ({
-    scope1: theme.palette.primary.main || '#1AC99F',
-    scope2: theme.palette.secondary.main || '#2E8B8B',
-    scope3: theme.palette.info.main || '#3498db',
-    forecast: theme.palette.warning.main || '#f39c12',
-    target: theme.palette.success.dark || '#009a44',
-    sbt: theme.palette.error.main || '#e74c3c',
-    initiatives: theme.palette.grey[600] || '#6c757d',
-  }));
 
   // Filter data based on selected year range
   const filteredData = useMemo(() => {
@@ -103,9 +94,6 @@ function EmissionsChart({ data = SAMPLE_DATA }) {
   const handleToggleChange = (seriesKey, value) => {
     setToggles(prev => ({ ...prev, [seriesKey]: value }));
   };
-  const handleColorChange = (seriesKey, color) => {
-    setSeriesColors(prev => ({ ...prev, [seriesKey]: color }));
-  };
 
   // Check if we have valid data to render
   if (!filteredData || filteredData.length === 0) {
@@ -150,7 +138,7 @@ function EmissionsChart({ data = SAMPLE_DATA }) {
           chartType={chartType}
           data={filteredData}
           toggles={toggles}
-          seriesColors={seriesColors}
+          seriesColors={FIXED_SERIES_COLORS}
         />
       </Box>
 
@@ -158,9 +146,6 @@ function EmissionsChart({ data = SAMPLE_DATA }) {
       <Box mb={2}>
         <DataToggles toggles={toggles} onToggleChange={handleToggleChange} />
       </Box>
-
-      {/* Advanced settings panel for customizing series colors */}
-      <AdvancedSettingsPanel colors={seriesColors} onColorChange={handleColorChange} />
     </Box>
   );
 }

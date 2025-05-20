@@ -22,10 +22,7 @@ const initialFormData = {
   scope1: '',
   scope2: '',
   scope3: '',
-  forecast: '',
-  target: '',
-  sbt: '',
-  initiatives: ''
+  
 };
 
 function DataInputForm({ onAddData, existingYears = [] }) {

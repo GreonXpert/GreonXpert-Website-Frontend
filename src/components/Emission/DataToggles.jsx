@@ -33,10 +33,7 @@ function formatLabel(key) {
     case 'scope1': return 'Scope 1';
     case 'scope2': return 'Scope 2';
     case 'scope3': return 'Scope 3';
-    case 'forecast': return 'Forecast';
-    case 'target': return 'Target';
-    case 'sbt': return 'SBT';
-    case 'initiatives': return 'Initiatives';
+    
     default: return key;
   }
 }

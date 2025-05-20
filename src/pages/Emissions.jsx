@@ -18,20 +18,10 @@ import DataManagement from '../components/Emission/DataManagement';
 const Emissions = () => {
   const [tabValue, setTabValue] = useState(0);
   const [emissionsData, setEmissionsData] = useState(null);
-  const [chartType, setChartType] = useState('line');
 
   // Handler for tab changes
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
-    
-    // Set appropriate chart type based on selected tab
-    if (newValue === 1) {
-      setChartType('bar');  // By Scope tab shows bar chart by default
-    } else if (newValue === 2) {
-      setChartType('pie');  // By Category tab shows pie chart by default
-    } else {
-      setChartType('line'); // Overview tab shows line chart by default
-    }
   };
 
   // Handler for data changes from DataManagement component
@@ -191,7 +181,7 @@ const Emissions = () => {
         </Grid>
       </Grid>
 
-      {/* Main Tabs */}
+      {/* Main Tabs - Only keeping Emissions Overview and Data Management */}
       <Paper sx={{ mb: 3 }}>
         <Tabs
           value={tabValue}
@@ -200,8 +190,6 @@ const Emissions = () => {
           textColor="primary"
         >
           <Tab label="Emissions Overview" />
-          <Tab label="By Scope" />
-          <Tab label="By Category" />
           <Tab label="Data Management" />
         </Tabs>
       </Paper>
@@ -218,28 +206,6 @@ const Emissions = () => {
           </>
         )}
         {tabValue === 1 && (
-          <>
-            <Typography variant="h6" gutterBottom>Emissions by Scope</Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Breakdown of emissions by scope (1, 2, and 3) over time.
-            </Typography>
-            <EmissionsChart 
-              data={emissionsData} 
-            />
-          </>
-        )}
-        {tabValue === 2 && (
-          <>
-            <Typography variant="h6" gutterBottom>Emissions by Category</Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Pie chart showing emissions breakdown by category.
-            </Typography>
-            <EmissionsChart 
-              data={emissionsData} 
-            />
-          </>
-        )}
-        {tabValue === 3 && (
           <>
             <Typography variant="h6" gutterBottom>Data Management</Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
