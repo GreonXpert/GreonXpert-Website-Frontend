@@ -1,4 +1,4 @@
-// src/components/Emission/DataTable.jsx (updated)
+// src/components/Emission/DataTable.jsx (fixed)
 import React, { useState } from 'react';
 import {
   Box,
@@ -25,7 +25,8 @@ import {
   AccordionDetails,
   Tabs,
   Tab,
-  Grid
+  Grid,
+  CircularProgress
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -34,7 +35,7 @@ import FileUploadIcon from '@mui/icons-material/FileUpload';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTheme } from '@mui/material/styles';
 
-function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
+function DataTable({ data, onDeleteData, onUpdateData, onImportData, isLoading = false }) {
   const theme = useTheme();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [currentEditItem, setCurrentEditItem] = useState(null);
@@ -159,8 +160,8 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
     // Create CSV header
     const headers = allFields.map(field => field.label).join(',');
     
-    // Create CSV rows
-    const csvRows = data
+    // Create CSV rows - Create a copy of data array before sorting
+    const csvRows = [...data]
       .sort((a, b) => a.year - b.year)
       .map(row => {
         return allFields.map(field => {
@@ -321,6 +322,11 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
     );
   }
 
+  // Sort data for table rendering
+  const sortedData = [...data].sort((a, b) => a.year - b.year);
+  // Sort data for accordions (newest first)
+  const sortedDataReverse = [...data].sort((a, b) => b.year - a.year);
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -335,6 +341,7 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
                 color: theme.palette.primary.main,
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
               }}
+              disabled={isLoading}
             >
               <FileUploadIcon />
             </IconButton>
@@ -346,6 +353,7 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
                 color: theme.palette.primary.main,
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
               }}
+              disabled={isLoading}
             >
               <FileDownloadIcon />
             </IconButton>
@@ -375,9 +383,8 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {data
-                .sort((a, b) => a.year - b.year)
-                .map(item => (
+              {/* Use sorted data array instead of sorting in place */}
+              {sortedData.map(item => (
                 <TableRow 
                   key={item.year}
                   sx={{ 
@@ -403,6 +410,7 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
                         size="small" 
                         onClick={() => handleEdit(item)}
                         sx={{ color: theme.palette.info.main }}
+                        disabled={isLoading}
                       >
                         <EditIcon fontSize="small" />
                       </IconButton>
@@ -412,6 +420,7 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
                         size="small" 
                         onClick={() => onDeleteData(item)}
                         sx={{ color: theme.palette.error.main }}
+                        disabled={isLoading}
                       >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -422,6 +431,11 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
             </TableBody>
           </Table>
         </TableContainer>
+        {isLoading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <CircularProgress size={40} />
+          </Box>
+        )}
       </Paper>
       
       {/* Detailed Breakdown Accordion for each year */}
@@ -429,9 +443,8 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
         Detailed Breakdown by Year
       </Typography>
       
-      {data
-        .sort((a, b) => b.year - a.year) // Newest first
-        .map(item => (
+      {/* Use sorted data array for accordions instead of sorting in place */}
+      {sortedDataReverse.map(item => (
         <Accordion key={item.year} sx={{ mb: 2 }}>
           <AccordionSummary
             expandIcon={<ExpandMoreIcon />}

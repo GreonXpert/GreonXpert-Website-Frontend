@@ -63,6 +63,7 @@ const Header = () => {
       sx={{
         width: { md: `calc(100% - ${isMobile ? 0 : (sidebarOpen ? '280px' : '64px')})` },
         ml: { md: isMobile ? 0 : (sidebarOpen ? '280px' : '64px') },
+        height: '73px',
         bgcolor: 'background.paper',
         color: 'text.primary',
         borderBottom: '1px solid',
@@ -90,19 +91,10 @@ const Header = () => {
 
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           {/* Theme toggler */}
-          <Tooltip title={darkMode ? 'Light Mode' : 'Dark Mode'}>
-            <IconButton color="inherit" onClick={() => dispatch(toggleDarkMode())}>
-              {darkMode ? <LightModeIcon /> : <DarkModeIcon />}
-            </IconButton>
-          </Tooltip>
+          
 
-          {/* Notifications */}
-          <Tooltip title="Notifications">
-            <IconButton color="inherit">
-              <NotificationsIcon />
-            </IconButton>
-          </Tooltip>
-
+         
+          
           {/* Profile menu */}
           <Box sx={{ ml: 1 }}>
             <Tooltip title="Account settings">
@@ -133,14 +125,7 @@ const Header = () => {
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
             >
-              <MenuItem onClick={handleMenuClose}>
-                <PersonIcon fontSize="small" sx={{ mr: 1 }} />
-                Profile
-              </MenuItem>
-              <MenuItem onClick={handleSettings}>
-                <SettingsIcon fontSize="small" sx={{ mr: 1 }} />
-                Settings
-              </MenuItem>
+             
               <MenuItem onClick={handleLogout}>
                 <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
                 Logout

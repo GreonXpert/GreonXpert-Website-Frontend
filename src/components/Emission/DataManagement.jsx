@@ -1,8 +1,25 @@
-// src/components/Emission/DataManagement.jsx
+// src/components/Emission/DataManagement.jsx - Updated to use backend API
 import React, { useState, useEffect } from 'react';
-import { Box, Paper, Typography, Divider, Tabs, Tab, Alert } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+  Box, 
+  Paper, 
+  Typography, 
+  Divider, 
+  Tabs, 
+  Tab, 
+  Alert,
+  CircularProgress 
+} from '@mui/material';
 import DataInputForm from './DataInputForm';
 import DataTable from './DataTable';
+import { 
+  fetchAllEmissions, 
+  createEmissionData, 
+  updateEmissionData, 
+  deleteEmissionData,
+  bulkImportEmissionsData
+} from '../../store/slices/emissionSlice';
 
 // Default sample data if no data is provided
 const DEFAULT_SAMPLE_DATA = [
@@ -88,39 +105,51 @@ const DEFAULT_SAMPLE_DATA = [
   }
 ];
 
-
-// LocalStorage key for emissions data
-const STORAGE_KEY = 'emissionsData';
-
 function DataManagement({ initialData, onDataChange }) {
-  // Initialize with provided data, localStorage data, or default sample data
-  const [emissionsData, setEmissionsData] = useState(() => {
-    // Check localStorage first
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    if (storedData) {
-      try {
-        return JSON.parse(storedData);
-      } catch (e) {
-        console.error('Failed to parse stored emissions data:', e);
-      }
-    }
-    
-    // Fallback to initialData or default sample data
-    return initialData || DEFAULT_SAMPLE_DATA;
-  });
+  const dispatch = useDispatch();
   
+  // Get emissions data from Redux store
+  const { emissions, loading, error, successMessage } = useSelector((state) => state.emissions);
+  const { isAuthenticated } = useSelector((state) => state.auth);
+  
+  const [emissionsData, setEmissionsData] = useState(initialData || DEFAULT_SAMPLE_DATA);
   const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
   const [tabValue, setTabValue] = useState(0);
+  const [dataFetched, setDataFetched] = useState(false);
 
-  // Update localStorage when emissions data changes
+  // Fetch emissions data from API on component mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(emissionsData));
-    
-    // Notify parent component of data change
-    if (onDataChange) {
-      onDataChange(emissionsData);
+    if (!dataFetched) {
+      dispatch(fetchAllEmissions());
+      setDataFetched(true);
     }
-  }, [emissionsData, onDataChange]);
+  }, [dispatch, dataFetched]);
+
+  // Update local state when emissions data changes in Redux store
+  useEffect(() => {
+    if (emissions && emissions.length > 0) {
+      setEmissionsData(emissions);
+      
+      // Notify parent component of data change
+      if (onDataChange) {
+        onDataChange(emissions);
+      }
+    }
+  }, [emissions, onDataChange]);
+
+  // Handle Redux success messages
+  useEffect(() => {
+    if (successMessage) {
+      showNotification(successMessage);
+    }
+  }, [successMessage]);
+
+  // Handle Redux errors
+  useEffect(() => {
+    if (error) {
+      showNotification(error, 'error');
+    }
+  }, [error]);
 
   // Show notification
   const showNotification = (message, type = 'success') => {
@@ -138,7 +167,7 @@ function DataManagement({ initialData, onDataChange }) {
 
   // Handle adding new data
   const handleAddData = (newDataPoint) => {
-    // Check if we already have data for this year
+    // Check if we already have data for this year (client-side validation)
     const existingIndex = emissionsData.findIndex(item => item.year === newDataPoint.year);
     
     if (existingIndex >= 0) {
@@ -146,14 +175,24 @@ function DataManagement({ initialData, onDataChange }) {
       return;
     }
     
-    // Add the new data point
-    setEmissionsData(prevData => [...prevData, newDataPoint]);
-    showNotification(`Added data for year ${newDataPoint.year}`);
+    // Add the new data point to the backend
+    if (isAuthenticated) {
+      dispatch(createEmissionData(newDataPoint));
+    } else {
+      // Fallback to local handling if not authenticated
+      setEmissionsData(prevData => [...prevData, newDataPoint]);
+      showNotification(`Added data for year ${newDataPoint.year}`);
+      
+      // Notify parent component
+      if (onDataChange) {
+        onDataChange([...emissionsData, newDataPoint]);
+      }
+    }
   };
 
   // Handle updating existing data
   const handleUpdateData = (oldItem, updatedItem) => {
-    // Check for duplicate year if year is being changed
+    // Check for duplicate year if year is being changed (client-side validation)
     if (oldItem.year !== updatedItem.year) {
       const existingIndex = emissionsData.findIndex(item => item.year === updatedItem.year);
       if (existingIndex >= 0 && emissionsData[existingIndex].year !== oldItem.year) {
@@ -162,53 +201,105 @@ function DataManagement({ initialData, onDataChange }) {
       }
     }
     
-    // Update the data point
-    setEmissionsData(prevData => 
-      prevData.map(item => 
-        item.year === oldItem.year ? updatedItem : item
-      )
-    );
-    
-    showNotification(`Updated data for year ${oldItem.year}`);
+    // Update the data point in the backend
+    if (isAuthenticated) {
+      dispatch(updateEmissionData({ year: oldItem.year, emissionData: updatedItem }));
+    } else {
+      // Fallback to local handling if not authenticated
+      setEmissionsData(prevData => 
+        prevData.map(item => 
+          item.year === oldItem.year ? updatedItem : item
+        )
+      );
+      
+      showNotification(`Updated data for year ${oldItem.year}`);
+      
+      // Notify parent component
+      if (onDataChange) {
+        onDataChange(emissionsData.map(item => 
+          item.year === oldItem.year ? updatedItem : item
+        ));
+      }
+    }
   };
 
   // Handle deleting data
   const handleDeleteData = (item) => {
-    setEmissionsData(prevData => 
-      prevData.filter(dataPoint => dataPoint.year !== item.year)
-    );
-    showNotification(`Deleted data for year ${item.year}`);
+    // Delete the data point from the backend
+    if (isAuthenticated) {
+      dispatch(deleteEmissionData(item.year));
+    } else {
+      // Fallback to local handling if not authenticated
+      setEmissionsData(prevData => 
+        prevData.filter(dataPoint => dataPoint.year !== item.year)
+      );
+      
+      showNotification(`Deleted data for year ${item.year}`);
+      
+      // Notify parent component
+      if (onDataChange) {
+        onDataChange(emissionsData.filter(dataPoint => dataPoint.year !== item.year));
+      }
+    }
   };
 
-  // Handle importing data (from CSV)
+  // Handle importing data
   const handleImportData = (importedData) => {
-    // Check for conflicts with existing data
-    const existingYears = emissionsData.map(item => item.year);
-    const conflicts = importedData.filter(item => existingYears.includes(item.year));
-    
-    if (conflicts.length > 0) {
-      // Replace conflicting data points
-      const updatedData = [...emissionsData];
+    // Import data to the backend
+    if (isAuthenticated) {
+      dispatch(bulkImportEmissionsData({ 
+        data: importedData,
+        overwrite: true // Allow overwriting existing data
+      }));
       
-      // For each conflict, update the existing data point
-      conflicts.forEach(conflict => {
-        const index = updatedData.findIndex(item => item.year === conflict.year);
-        if (index >= 0) {
-          updatedData[index] = conflict;
-        }
-      });
-      
-      // Add non-conflicting data points
-      const nonConflictingData = importedData.filter(item => !existingYears.includes(item.year));
-      setEmissionsData([...updatedData, ...nonConflictingData]);
-      
-      showNotification(
-        `Imported ${importedData.length} data points. ${conflicts.length} existing records were updated.`
-      );
+      // Refetch all data after import
+      setTimeout(() => {
+        dispatch(fetchAllEmissions());
+      }, 1000);
     } else {
-      // No conflicts, just add all imported data
-      setEmissionsData(prevData => [...prevData, ...importedData]);
-      showNotification(`Imported ${importedData.length} data points.`);
+      // Fallback to local handling if not authenticated
+      // Check for conflicts with existing data
+      const existingYears = emissionsData.map(item => item.year);
+      const conflicts = importedData.filter(item => existingYears.includes(item.year));
+      
+      if (conflicts.length > 0) {
+        // Replace conflicting data points
+        const updatedData = [...emissionsData];
+        
+        // For each conflict, update the existing data point
+        conflicts.forEach(conflict => {
+          const index = updatedData.findIndex(item => item.year === conflict.year);
+          if (index >= 0) {
+            updatedData[index] = conflict;
+          }
+        });
+        
+        // Add non-conflicting data points
+        const nonConflictingData = importedData.filter(item => !existingYears.includes(item.year));
+        const newData = [...updatedData, ...nonConflictingData];
+        
+        setEmissionsData(newData);
+        
+        showNotification(
+          `Imported ${importedData.length} data points. ${conflicts.length} existing records were updated.`
+        );
+        
+        // Notify parent component
+        if (onDataChange) {
+          onDataChange(newData);
+        }
+      } else {
+        // No conflicts, just add all imported data
+        const newData = [...emissionsData, ...importedData];
+        setEmissionsData(newData);
+        
+        showNotification(`Imported ${importedData.length} data points.`);
+        
+        // Notify parent component
+        if (onDataChange) {
+          onDataChange(newData);
+        }
+      }
     }
   };
 
@@ -220,6 +311,15 @@ function DataManagement({ initialData, onDataChange }) {
   // Get existing years for validation
   const existingYears = emissionsData.map(item => item.year);
 
+  // Show loading state
+  if (loading && !emissionsData.length) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box>
       {/* Notification Alert */}
@@ -230,6 +330,16 @@ function DataManagement({ initialData, onDataChange }) {
           onClose={() => setNotification(prev => ({ ...prev, show: false }))}
         >
           {notification.message}
+        </Alert>
+      )}
+      
+      {/* Authentication Status Alert - Only show when not authenticated */}
+      {!isAuthenticated && (
+        <Alert 
+          severity="info" 
+          sx={{ mb: 2 }}
+        >
+          You are currently in demo mode. Log in to save changes to the database.
         </Alert>
       )}
       
@@ -260,6 +370,7 @@ function DataManagement({ initialData, onDataChange }) {
           onDeleteData={handleDeleteData}
           onUpdateData={handleUpdateData}
           onImportData={handleImportData}
+          isLoading={loading}
         />
       )}
     </Box>

@@ -1,7 +1,7 @@
 // src/store/slices/imageSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import imageService from '../../services/imageService';
 import { showSnackbar } from './notificationSlice';
+import imageService from '../../services/imageService';
 
 // Async thunk for uploading an image
 export const uploadImage = createAsyncThunk(
