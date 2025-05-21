@@ -6,18 +6,88 @@ import DataTable from './DataTable';
 
 // Default sample data if no data is provided
 const DEFAULT_SAMPLE_DATA = [
-  { year: 2015, scope1: 250, scope2: 300, scope3: 450,  },
-  { year: 2016, scope1: 240, scope2: 280, scope3: 430, },
-  { year: 2017, scope1: 230, scope2: 270, scope3: 410,  },
-  { year: 2018, scope1: 200, scope2: 250, scope3: 400,  },
-  { year: 2019, scope1: 180, scope2: 230, scope3: 390, },
-  { year: 2020, scope1: 160, scope2: 210, scope3: 380,  },
-  { year: 2021, scope1: 150, scope2: 190, scope3: 360,  },
-  { year: 2022, scope1: 140, scope2: 180, scope3: 340,  },
-  { year: 2023, scope1: 130, scope2: 170, scope3: 320,  },
-  { year: 2024, scope1: 120, scope2: 160, scope3: 310,  },
-  { year: 2025, scope1: 110, scope2: 150, scope3: 300,  }
+  { 
+    year: 2023, 
+    // Main scope totals
+    scope1: 84.8, 
+    scope2: 70, 
+    scope3: 143,
+    // Scope 1 subcategories
+    scope1_naturalGasHeating: 20.0,
+    scope1_dieselGenerator: 43.0,
+    scope1_dieselFleet: 21.8,
+    // Scope 2 subcategories
+    scope2_nyGridElectricity: 30,
+    scope2_mfGridElectricity: 40,
+    // Scope 3 subcategories
+    scope3_businessTravel: 120,
+    scope3_employeeCommuting: 10,
+    scope3_logistics: 5,
+    scope3_waste: 8
+  },
+  { 
+    year: 2022, 
+    scope1: 95.0, 
+    scope2: 80, 
+    scope3: 160,
+    scope1_naturalGasHeating: 22.0,
+    scope1_dieselGenerator: 48.0,
+    scope1_dieselFleet: 25.0,
+    scope2_nyGridElectricity: 35,
+    scope2_mfGridElectricity: 45,
+    scope3_businessTravel: 130,
+    scope3_employeeCommuting: 12,
+    scope3_logistics: 8,
+    scope3_waste: 10
+  },
+  // Add similar structure for other years with slightly different values
+  { 
+    year: 2021, 
+    scope1: 105.0, 
+    scope2: 90, 
+    scope3: 175,
+    scope1_naturalGasHeating: 25.0,
+    scope1_dieselGenerator: 52.0,
+    scope1_dieselFleet: 28.0,
+    scope2_nyGridElectricity: 40,
+    scope2_mfGridElectricity: 50,
+    scope3_businessTravel: 140,
+    scope3_employeeCommuting: 15,
+    scope3_logistics: 10,
+    scope3_waste: 10
+  },
+  { 
+    year: 2020, 
+    scope1: 115.0, 
+    scope2: 100, 
+    scope3: 190,
+    scope1_naturalGasHeating: 28.0,
+    scope1_dieselGenerator: 57.0,
+    scope1_dieselFleet: 30.0,
+    scope2_nyGridElectricity: 45,
+    scope2_mfGridElectricity: 55,
+    scope3_businessTravel: 150,
+    scope3_employeeCommuting: 18,
+    scope3_logistics: 12,
+    scope3_waste: 10
+  },
+  { 
+    year: 2019, 
+    scope1: 125.0, 
+    scope2: 110, 
+    scope3: 200,
+    scope1_naturalGasHeating: 30.0,
+    scope1_dieselGenerator: 62.0,
+    scope1_dieselFleet: 33.0,
+    scope2_nyGridElectricity: 50,
+    scope2_mfGridElectricity: 60,
+    scope3_businessTravel: 155,
+    scope3_employeeCommuting: 20,
+    scope3_logistics: 15,
+    scope3_waste: 10
+  }
 ];
+
 
 // LocalStorage key for emissions data
 const STORAGE_KEY = 'emissionsData';

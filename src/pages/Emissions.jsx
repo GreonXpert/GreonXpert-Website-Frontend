@@ -30,69 +30,90 @@ const Emissions = () => {
   };
 
   // Calculate summary stats for the dashboard cards
-  const calculateSummaryStats = () => {
-    if (!emissionsData || emissionsData.length === 0) {
-      return {
-        totalEmissions: 0,
-        targetProgress: 0,
-        scope1And2: 0,
-        scope3: 0,
-        scope1Change: 0,
-        scope2Change: 0,
-        scope3Change: 0
-      };
-    }
-
-    // Sort data by year
-    const sortedData = [...emissionsData].sort((a, b) => a.year - b.year);
-    
-    // Get current year (latest year) data
-    const currentYearData = sortedData[sortedData.length - 1];
-    
-    // Get previous year data (if available)
-    const prevYearData = sortedData.length > 1 ? sortedData[sortedData.length - 2] : null;
-    
-    // Calculate totals
-    const scope1 = currentYearData.scope1 || 0;
-    const scope2 = currentYearData.scope2 || 0;
-    const scope3 = currentYearData.scope3 || 0;
-    const totalEmissions = scope1 + scope2 + scope3;
-    const scope1And2 = scope1 + scope2;
-    
-    // Calculate target progress
-    const target = currentYearData.target || 0;
-    const baselineYear = sortedData[0];
-    const baselineTotal = (baselineYear.scope1 || 0) + (baselineYear.scope2 || 0) + (baselineYear.scope3 || 0);
-    const targetProgress = target > 0 
-      ? Math.round((1 - (totalEmissions / target)) * 100)
-      : Math.round((1 - (totalEmissions / baselineTotal)) * 100);
-    
-    // Calculate year-over-year changes
-    let scope1Change = 0;
-    let scope2Change = 0;
-    let scope3Change = 0;
-    
-    if (prevYearData) {
-      const prevScope1 = prevYearData.scope1 || 0;
-      const prevScope2 = prevYearData.scope2 || 0;
-      const prevScope3 = prevYearData.scope3 || 0;
-      
-      scope1Change = prevScope1 > 0 ? ((scope1 - prevScope1) / prevScope1) * 100 : 0;
-      scope2Change = prevScope2 > 0 ? ((scope2 - prevScope2) / prevScope2) * 100 : 0;
-      scope3Change = prevScope3 > 0 ? ((scope3 - prevScope3) / prevScope3) * 100 : 0;
-    }
-    
+// Fixed calculateSummaryStats function for Emissions.jsx
+const calculateSummaryStats = () => {
+  if (!emissionsData || emissionsData.length === 0) {
     return {
-      totalEmissions,
-      targetProgress,
-      scope1And2,
-      scope3,
-      scope1Change,
-      scope2Change,
-      scope3Change
+      totalEmissions: 0,
+      targetProgress: 0,
+      scope1And2: 0,
+      scope3: 0,
+      scope1Change: 0,
+      scope2Change: 0,
+      scope3Change: 0
     };
-  };
+  }
 
+  // Sort data by year
+  const sortedData = [...emissionsData].sort((a, b) => a.year - b.year);
+  
+  // Get current year (latest year) data
+  const currentYearData = sortedData[sortedData.length - 1];
+  
+  // Get previous year data (if available)
+  const prevYearData = sortedData.length > 1 ? sortedData[sortedData.length - 2] : null;
+  
+  // Calculate totals - ensure we're using proper numeric values with fallbacks
+  const scope1 = parseFloat(currentYearData.scope1 || 0);
+  const scope2 = parseFloat(currentYearData.scope2 || 0);
+  const scope3 = parseFloat(currentYearData.scope3 || 0);
+  
+  // Calculate total emissions correctly
+  const totalEmissions = scope1 + scope2 + scope3;
+  const scope1And2 = scope1 + scope2;
+  
+  // Calculate target progress
+  const target = parseFloat(currentYearData.target || 0);
+  const baselineYear = sortedData[0];
+  const baselineScope1 = parseFloat(baselineYear.scope1 || 0);
+  const baselineScope2 = parseFloat(baselineYear.scope2 || 0);
+  const baselineScope3 = parseFloat(baselineYear.scope3 || 0);
+  const baselineTotal = baselineScope1 + baselineScope2 + baselineScope3;
+  
+  // Calculate percent change from baseline to current
+  const percentChange = baselineTotal > 0 
+    ? ((baselineTotal - totalEmissions) / baselineTotal) * 100
+    : 0;
+  
+  // If target exists use it, otherwise use the percent change from baseline
+  const targetProgress = target > 0 
+    ? Math.round((1 - (totalEmissions / target)) * 100)
+    : Math.round(percentChange);
+  
+  // Calculate year-over-year changes
+  let scope1Change = 0;
+  let scope2Change = 0;
+  let scope3Change = 0;
+  
+  if (prevYearData) {
+    const prevScope1 = parseFloat(prevYearData.scope1 || 0);
+    const prevScope2 = parseFloat(prevYearData.scope2 || 0);
+    const prevScope3 = parseFloat(prevYearData.scope3 || 0);
+    
+    // Use proper percent change calculation and ensure we don't divide by zero
+    scope1Change = prevScope1 > 0 
+      ? ((scope1 - prevScope1) / prevScope1) * 100 
+      : (scope1 > 0 ? 100 : 0);
+      
+    scope2Change = prevScope2 > 0 
+      ? ((scope2 - prevScope2) / prevScope2) * 100 
+      : (scope2 > 0 ? 100 : 0);
+      
+    scope3Change = prevScope3 > 0 
+      ? ((scope3 - prevScope3) / prevScope3) * 100 
+      : (scope3 > 0 ? 100 : 0);
+  }
+  
+  return {
+    totalEmissions,
+    targetProgress,
+    scope1And2,
+    scope3,
+    scope1Change,
+    scope2Change,
+    scope3Change
+  };
+};
   const stats = calculateSummaryStats();
 
   return (

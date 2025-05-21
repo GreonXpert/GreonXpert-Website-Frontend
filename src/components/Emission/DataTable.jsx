@@ -1,4 +1,4 @@
-// src/components/Emission/DataTable.jsx
+// src/components/Emission/DataTable.jsx (updated)
 import React, { useState } from 'react';
 import {
   Box,
@@ -19,12 +19,19 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  alpha
+  alpha,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Tabs,
+  Tab,
+  Grid
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTheme } from '@mui/material/styles';
 
 function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
@@ -36,14 +43,31 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState('');
+  const [editTabValue, setEditTabValue] = useState(0);
 
-  // Fields to display in the table
-  const dataFields = [
+  // Main fields to display in the table
+  const mainFields = [
     { key: 'year', label: 'Year' },
     { key: 'scope1', label: 'Scope 1' },
     { key: 'scope2', label: 'Scope 2' },
-    { key: 'scope3', label: 'Scope 3' },
-    
+    { key: 'scope3', label: 'Scope 3' }
+  ];
+
+  // All fields including subcategories for export/import
+  const allFields = [
+    ...mainFields,
+    // Scope 1 subcategories
+    { key: 'scope1_naturalGasHeating', label: 'Natural Gas Heating' },
+    { key: 'scope1_dieselGenerator', label: 'Diesel Generator' },
+    { key: 'scope1_dieselFleet', label: 'Diesel Fleet' },
+    // Scope 2 subcategories
+    { key: 'scope2_nyGridElectricity', label: 'NY Grid Electricity' },
+    { key: 'scope2_mfGridElectricity', label: 'MF Grid Electricity' },
+    // Scope 3 subcategories
+    { key: 'scope3_businessTravel', label: 'Business Travel' },
+    { key: 'scope3_employeeCommuting', label: 'Employee Commuting' },
+    { key: 'scope3_logistics', label: 'Logistics' },
+    { key: 'scope3_waste', label: 'Waste' }
   ];
 
   // Open edit dialog
@@ -52,6 +76,7 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
     setEditFormData({...item});
     setErrors({});
     setEditDialogOpen(true);
+    setEditTabValue(0); // Reset to first tab
   };
 
   // Handle edit form input changes
@@ -65,10 +90,35 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
     
     setEditFormData(prev => ({ ...prev, [name]: updatedValue }));
     
+    // If changing a subcategory, update the total automatically
+    if (name.startsWith('scope1_')) {
+      updateScopeTotal('scope1');
+    } else if (name.startsWith('scope2_')) {
+      updateScopeTotal('scope2');
+    } else if (name.startsWith('scope3_')) {
+      updateScopeTotal('scope3');
+    }
+    
     // Clear error for this field if it exists
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
+  };
+
+  // Function to update scope totals based on subcategories
+  const updateScopeTotal = (scopeName) => {
+    const scopePrefix = scopeName + '_';
+    let total = 0;
+    
+    // Sum all subcategories for this scope
+    Object.keys(editFormData).forEach(key => {
+      if (key.startsWith(scopePrefix) && editFormData[key] !== '') {
+        total += parseFloat(editFormData[key] || 0);
+      }
+    });
+    
+    // Update the scope total
+    setEditFormData(prev => ({ ...prev, [scopeName]: total }));
   };
 
   // Form validation for edit form
@@ -92,13 +142,6 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
       newErrors.scope1 = 'At least one scope is required';
     }
     
-    // Numeric fields should be valid numbers
-    ['scope1', 'scope2', 'scope3'].forEach(field => {
-      if (editFormData[field] !== '' && (isNaN(editFormData[field]) || editFormData[field] < 0)) {
-        newErrors[field] = 'Must be a positive number';
-      }
-    });
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -114,13 +157,13 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
   // Handle export data (download CSV)
   const handleExportData = () => {
     // Create CSV header
-    const headers = dataFields.map(field => field.label).join(',');
+    const headers = allFields.map(field => field.label).join(',');
     
     // Create CSV rows
     const csvRows = data
       .sort((a, b) => a.year - b.year)
       .map(row => {
-        return dataFields.map(field => {
+        return allFields.map(field => {
           // Format each cell properly for CSV
           const value = row[field.key] ?? '';
           // Handle special case for values that might need to be quoted
@@ -168,7 +211,7 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
       // Map headers to fields
       const fieldMap = {};
       headers.forEach((header, index) => {
-        const field = dataFields.find(f => f.label.toLowerCase() === header.toLowerCase());
+        const field = allFields.find(f => f.label.toLowerCase() === header.toLowerCase());
         if (field) {
           fieldMap[index] = field.key;
         }
@@ -208,6 +251,17 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
           return;
         }
         
+        // Calculate scope totals if missing
+        if (!rowObj.scope1) {
+          rowObj.scope1 = calculateScopeTotal(rowObj, 'scope1_');
+        }
+        if (!rowObj.scope2) {
+          rowObj.scope2 = calculateScopeTotal(rowObj, 'scope2_');
+        }
+        if (!rowObj.scope3) {
+          rowObj.scope3 = calculateScopeTotal(rowObj, 'scope3_');
+        }
+        
         // Check if at least one scope is present
         if (!rowObj.scope1 && !rowObj.scope2 && !rowObj.scope3) {
           setImportError(`Row ${i+1} is missing scope data`);
@@ -234,11 +288,27 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
     }
   };
 
+  // Helper function to calculate scope total from subcategories
+  const calculateScopeTotal = (data, prefix) => {
+    let total = 0;
+    Object.keys(data).forEach(key => {
+      if (key.startsWith(prefix)) {
+        total += parseFloat(data[key] || 0);
+      }
+    });
+    return total;
+  };
+
   // Format CSV example for import dialog
   const getExampleCSV = () => {
-    const headers = dataFields.map(f => f.label).join(',');
-    const exampleRow = '2023,150,200,300,500,450,,';
+    const headers = allFields.map(f => f.label).join(',');
+    const exampleRow = '2023,84.8,70,143,20,43,21.8,30,40,120,10,5,8';
     return `${headers}\n${exampleRow}`;
+  };
+
+  // Handle edit tab change
+  const handleEditTabChange = (event, newValue) => {
+    setEditTabValue(newValue);
   };
 
   if (!data || data.length === 0) {
@@ -283,12 +353,13 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
         </Box>
       </Box>
       
-      <Paper elevation={1} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+      {/* Main Table - Showing only the main fields for clarity */}
+      <Paper elevation={1} sx={{ borderRadius: 2, overflow: 'hidden', mb: 3 }}>
         <TableContainer>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
-                {dataFields.map(field => (
+                {mainFields.map(field => (
                   <TableCell 
                     key={field.key}
                     align={field.key === 'year' ? 'left' : 'right'}
@@ -313,7 +384,7 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
                     '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05) } 
                   }}
                 >
-                  {dataFields.map(field => (
+                  {mainFields.map(field => (
                     <TableCell 
                       key={`${item.year}-${field.key}`}
                       align={field.key === 'year' ? 'left' : 'right'}
@@ -353,6 +424,90 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
         </TableContainer>
       </Paper>
       
+      {/* Detailed Breakdown Accordion for each year */}
+      <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+        Detailed Breakdown by Year
+      </Typography>
+      
+      {data
+        .sort((a, b) => b.year - a.year) // Newest first
+        .map(item => (
+        <Accordion key={item.year} sx={{ mb: 2 }}>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon />}
+            aria-controls={`panel-${item.year}-content`}
+            id={`panel-${item.year}-header`}
+          >
+            <Typography fontWeight="medium">
+              Year {item.year} - Total: {(parseFloat(item.scope1 || 0) + parseFloat(item.scope2 || 0) + parseFloat(item.scope3 || 0)).toFixed(1)} tCO₂e
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Grid container spacing={3}>
+              {/* Scope 1 Breakdown */}
+              <Grid item xs={12} md={4}>
+                <Paper elevation={0} sx={{ p: 2, bgcolor: alpha(theme.palette.primary.main, 0.1), borderRadius: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="primary" gutterBottom>
+                    Scope 1 - Total {item.scope1?.toFixed(1) || 0} tCO₂e
+                  </Typography>
+                  <Box component="ul" sx={{ pl: 2 }}>
+                    <Box component="li" sx={{ mb: 1 }}>
+                      Natural Gas Heating: {item.scope1_naturalGasHeating?.toFixed(1) || 0} tCO₂e
+                    </Box>
+                    <Box component="li" sx={{ mb: 1 }}>
+                      Diesel Generator: {item.scope1_dieselGenerator?.toFixed(1) || 0} tCO₂e
+                    </Box>
+                    <Box component="li" sx={{ mb: 1 }}>
+                      Diesel Fleet: {item.scope1_dieselFleet?.toFixed(1) || 0} tCO₂e
+                    </Box>
+                  </Box>
+                </Paper>
+              </Grid>
+              
+              {/* Scope 2 Breakdown */}
+              <Grid item xs={12} md={4}>
+                <Paper elevation={0} sx={{ p: 2, bgcolor: alpha(theme.palette.secondary.main, 0.1), borderRadius: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="secondary" gutterBottom>
+                    Scope 2 - Total {item.scope2?.toFixed(1) || 0} tCO₂e
+                  </Typography>
+                  <Box component="ul" sx={{ pl: 2 }}>
+                    <Box component="li" sx={{ mb: 1 }}>
+                      NY Grid Electricity: {item.scope2_nyGridElectricity?.toFixed(1) || 0} tCO₂e
+                    </Box>
+                    <Box component="li" sx={{ mb: 1 }}>
+                      MF Grid Electricity: {item.scope2_mfGridElectricity?.toFixed(1) || 0} tCO₂e
+                    </Box>
+                  </Box>
+                </Paper>
+              </Grid>
+              
+              {/* Scope 3 Breakdown */}
+              <Grid item xs={12} md={4}>
+                <Paper elevation={0} sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.1), borderRadius: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="info.dark" gutterBottom>
+                    Scope 3 - Total {item.scope3?.toFixed(1) || 0} tCO₂e
+                  </Typography>
+                  <Box component="ul" sx={{ pl: 2 }}>
+                    <Box component="li" sx={{ mb: 1 }}>
+                      Business Travel: {item.scope3_businessTravel?.toFixed(1) || 0} tCO₂e
+                    </Box>
+                    <Box component="li" sx={{ mb: 1 }}>
+                      Employee Commuting: {item.scope3_employeeCommuting?.toFixed(1) || 0} tCO₂e
+                    </Box>
+                    <Box component="li" sx={{ mb: 1 }}>
+                      Logistics: {item.scope3_logistics?.toFixed(1) || 0} tCO₂e
+                    </Box>
+                    <Box component="li" sx={{ mb: 1 }}>
+                      Waste: {item.scope3_waste?.toFixed(1) || 0} tCO₂e
+                    </Box>
+                  </Box>
+                </Paper>
+              </Grid>
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
+      ))}
+      
       {/* Edit Dialog */}
       <Dialog 
         open={editDialogOpen} 
@@ -362,9 +517,18 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
       >
         <DialogTitle>Edit Emissions Data</DialogTitle>
         <DialogContent dividers>
-          <Box sx={{ py: 1 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2 }}>
-              {/* Year */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs value={editTabValue} onChange={handleEditTabChange}>
+              <Tab label="Year" />
+              <Tab label="Scope 1" />
+              <Tab label="Scope 2" />
+              <Tab label="Scope 3" />
+            </Tabs>
+          </Box>
+          
+          {/* Year Tab */}
+          {editTabValue === 0 && (
+            <Box sx={{ p: 1 }}>
               <TextField
                 label="Year"
                 name="year"
@@ -375,50 +539,213 @@ function DataTable({ data, onDeleteData, onUpdateData, onImportData }) {
                 helperText={errors.year}
                 fullWidth
                 inputProps={{ min: 1900, max: 2100 }}
+                sx={{ mb: 2 }}
               />
               
-              {/* Scope 1 */}
-              <TextField
-                label="Scope 1"
-                name="scope1"
-                type="number"
-                value={editFormData.scope1 || ''}
-                onChange={handleEditChange}
-                error={!!errors.scope1}
-                helperText={errors.scope1}
-                fullWidth
-                inputProps={{ min: 0, step: 0.1 }}
-              />
-              
-              {/* Scope 2 */}
-              <TextField
-                label="Scope 2"
-                name="scope2"
-                type="number"
-                value={editFormData.scope2 || ''}
-                onChange={handleEditChange}
-                error={!!errors.scope2}
-                helperText={errors.scope2}
-                fullWidth
-                inputProps={{ min: 0, step: 0.1 }}
-              />
-              
-              {/* Scope 3 */}
-              <TextField
-                label="Scope 3"
-                name="scope3"
-                type="number"
-                value={editFormData.scope3 || ''}
-                onChange={handleEditChange}
-                error={!!errors.scope3}
-                helperText={errors.scope3}
-                fullWidth
-                inputProps={{ min: 0, step: 0.1 }}
-              />
-              
-            
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+                Scope totals are automatically calculated from subcategories.
+                Navigate to each scope tab to edit the detailed breakdown.
+              </Typography>
             </Box>
-          </Box>
+          )}
+          
+          {/* Scope 1 Tab */}
+          {editTabValue === 1 && (
+            <Box sx={{ p: 1 }}>
+              <Typography variant="h6" color="primary" gutterBottom>
+                Scope 1 - Direct Emissions
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Natural Gas Heating (tCO₂e)"
+                    name="scope1_naturalGasHeating"
+                    type="number"
+                    value={editFormData.scope1_naturalGasHeating || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Diesel Generator (tCO₂e)"
+                    name="scope1_dieselGenerator"
+                    type="number"
+                    value={editFormData.scope1_dieselGenerator || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Diesel Fleet (tCO₂e)"
+                    name="scope1_dieselFleet"
+                    type="number"
+                    value={editFormData.scope1_dieselFleet || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Scope 1 Total (tCO₂e)"
+                    name="scope1"
+                    type="number"
+                    value={editFormData.scope1 || ''}
+                    onChange={handleEditChange}
+                    error={!!errors.scope1}
+                    helperText={errors.scope1 || "Auto-calculated from subcategories"}
+                    inputProps={{ min: 0, step: 0.1 }}
+                    disabled={true}
+                    sx={{ 
+                      bgcolor: 'action.hover',
+                      '& .MuiInputBase-input.Mui-disabled': {
+                        fontWeight: 'bold',
+                        color: 'text.primary',
+                        WebkitTextFillColor: 'rgba(0, 0, 0, 0.8)'
+                      }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+          
+          {/* Scope 2 Tab */}
+          {editTabValue === 2 && (
+            <Box sx={{ p: 1 }}>
+              <Typography variant="h6" color="secondary" gutterBottom>
+                Scope 2 - Indirect Emissions (Electricity)
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="NY Grid Electricity (tCO₂e)"
+                    name="scope2_nyGridElectricity"
+                    type="number"
+                    value={editFormData.scope2_nyGridElectricity || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="MF Grid Electricity (tCO₂e)"
+                    name="scope2_mfGridElectricity"
+                    type="number"
+                    value={editFormData.scope2_mfGridElectricity || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Scope 2 Total (tCO₂e)"
+                    name="scope2"
+                    type="number"
+                    value={editFormData.scope2 || ''}
+                    onChange={handleEditChange}
+                    error={!!errors.scope2}
+                    helperText={errors.scope2 || "Auto-calculated from subcategories"}
+                    inputProps={{ min: 0, step: 0.1 }}
+                    disabled={true}
+                    sx={{ 
+                      bgcolor: 'action.hover',
+                      '& .MuiInputBase-input.Mui-disabled': {
+                        fontWeight: 'bold',
+                        color: 'text.primary',
+                        WebkitTextFillColor: 'rgba(0, 0, 0, 0.8)'
+                      }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+          
+          {/* Scope 3 Tab */}
+          {editTabValue === 3 && (
+            <Box sx={{ p: 1 }}>
+              <Typography variant="h6" color="info.dark" gutterBottom>
+                Scope 3 - Other Indirect Emissions
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Business Travel (tCO₂e)"
+                    name="scope3_businessTravel"
+                    type="number"
+                    value={editFormData.scope3_businessTravel || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Employee Commuting (tCO₂e)"
+                    name="scope3_employeeCommuting"
+                    type="number"
+                    value={editFormData.scope3_employeeCommuting || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Logistics (tCO₂e)"
+                    name="scope3_logistics"
+                    type="number"
+                    value={editFormData.scope3_logistics || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Waste (tCO₂e)"
+                    name="scope3_waste"
+                    type="number"
+                    value={editFormData.scope3_waste || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, step: 0.1 }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Scope 3 Total (tCO₂e)"
+                    name="scope3"
+                    type="number"
+                    value={editFormData.scope3 || ''}
+                    onChange={handleEditChange}
+                    error={!!errors.scope3}
+                    helperText={errors.scope3 || "Auto-calculated from subcategories"}
+                    inputProps={{ min: 0, step: 0.1 }}
+                    disabled={true}
+                    sx={{ 
+                      bgcolor: 'action.hover',
+                      '& .MuiInputBase-input.Mui-disabled': {
+                        fontWeight: 'bold',
+                        color: 'text.primary',
+                        WebkitTextFillColor: 'rgba(0, 0, 0, 0.8)'
+                      }
+                    }}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>

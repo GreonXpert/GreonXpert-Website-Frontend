@@ -1,7 +1,7 @@
 // src/components/dashboard/EmissionsChart.jsx
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '@mui/material/styles';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Paper, alpha } from '@mui/material';
 import ChartControls from '../Emission/ChartControls';
 import DataToggles from '../Emission/DataToggles';
 import EmissionsStats from '../Emission/EmissionsStats';
@@ -9,88 +9,204 @@ import ChartRenderer from '../Emission/ChartRenderer';
 
 // Sample data to use when no data is provided
 const SAMPLE_DATA = [
-  { year: 2015, scope1: 250, scope2: 300, scope3: 450, },
-  { year: 2016, scope1: 240, scope2: 280, scope3: 430,  },
-  { year: 2017, scope1: 230, scope2: 270, scope3: 410,  },
-  { year: 2018, scope1: 200, scope2: 250, scope3: 400,  },
-  { year: 2019, scope1: 180, scope2: 230, scope3: 390, },
-  { year: 2020, scope1: 160, scope2: 210, scope3: 380,  },
-  { year: 2021, scope1: 150, scope2: 190, scope3: 360,  },
-  { year: 2022, scope1: 140, scope2: 180, scope3: 340,  },
-  { year: 2023, scope1: 130, scope2: 170, scope3: 320,  },
-  { year: 2024, scope1: 120, scope2: 160, scope3: 310,  },
-  { year: 2025, scope1: 110, scope2: 150, scope3: 300,  }
+  { 
+    year: 2023, 
+    scope1: 84.8, 
+    scope2: 70, 
+    scope3: 143,
+    scope1_naturalGasHeating: 20.0,
+    scope1_dieselGenerator: 43.0,
+    scope1_dieselFleet: 21.8,
+    scope2_nyGridElectricity: 30,
+    scope2_mfGridElectricity: 40,
+    scope3_businessTravel: 120,
+    scope3_employeeCommuting: 10,
+    scope3_logistics: 5,
+    scope3_waste: 8
+  },
+  { 
+    year: 2022, 
+    scope1: 95.0, 
+    scope2: 80, 
+    scope3: 160,
+    scope1_naturalGasHeating: 22.0,
+    scope1_dieselGenerator: 48.0,
+    scope1_dieselFleet: 25.0,
+    scope2_nyGridElectricity: 35,
+    scope2_mfGridElectricity: 45,
+    scope3_businessTravel: 130,
+    scope3_employeeCommuting: 12,
+    scope3_logistics: 8,
+    scope3_waste: 10
+  },
+  { 
+    year: 2021, 
+    scope1: 105.0, 
+    scope2: 90, 
+    scope3: 175,
+    scope1_naturalGasHeating: 25.0,
+    scope1_dieselGenerator: 52.0,
+    scope1_dieselFleet: 28.0,
+    scope2_nyGridElectricity: 40,
+    scope2_mfGridElectricity: 50,
+    scope3_businessTravel: 140,
+    scope3_employeeCommuting: 15,
+    scope3_logistics: 10,
+    scope3_waste: 10
+  },
+  { 
+    year: 2020, 
+    scope1: 115.0, 
+    scope2: 100, 
+    scope3: 190,
+    scope1_naturalGasHeating: 28.0,
+    scope1_dieselGenerator: 57.0,
+    scope1_dieselFleet: 30.0,
+    scope2_nyGridElectricity: 45,
+    scope2_mfGridElectricity: 55,
+    scope3_businessTravel: 150,
+    scope3_employeeCommuting: 18,
+    scope3_logistics: 12,
+    scope3_waste: 10
+  },
+  { 
+    year: 2019, 
+    scope1: 125.0, 
+    scope2: 110, 
+    scope3: 200,
+    scope1_naturalGasHeating: 30.0,
+    scope1_dieselGenerator: 62.0,
+    scope1_dieselFleet: 33.0,
+    scope2_nyGridElectricity: 50,
+    scope2_mfGridElectricity: 60,
+    scope3_businessTravel: 155,
+    scope3_employeeCommuting: 20,
+    scope3_logistics: 15,
+    scope3_waste: 10
+  }
 ];
 
-// Fixed colors for the chart
+// Fixed colors for the chart series
 const FIXED_SERIES_COLORS = {
-  scope1: '#1AC99F', // Green
-  scope2: '#2E8B8B', // Teal
-  scope3: '#3498db', // Blue
+  // Main scopes
+  scope1: '#1AC99F',
+  scope2: '#2E8B8B', 
+  scope3: '#3498db',
+  
+  // Scope 1 subcategories
+  scope1_naturalGasHeating: '#0d9e7f',
+  scope1_dieselGenerator: '#1AC99F',
+  scope1_dieselFleet: '#4edcb9',
+  
+  // Scope 2 subcategories
+  scope2_nyGridElectricity: '#1e6565',
+  scope2_mfGridElectricity: '#2E8B8B',
+  
+  // Scope 3 subcategories
+  scope3_businessTravel: '#1a6bac',
+  scope3_employeeCommuting: '#3498db',
+  scope3_logistics: '#5dade2',
+  scope3_waste: '#85c1e9'
 };
 
-function EmissionsChart({ data = SAMPLE_DATA }) {
+function EmissionsChart({ data = null }) {
   const theme = useTheme();
+  // If no data is provided, use the sample data
+  const emissionsData = data || SAMPLE_DATA;
 
   // State for chart controls
   const [title, setTitle] = useState('Emissions Overview');
-  const [startYear, setStartYear] = useState(2015);
-  const [endYear, setEndYear] = useState(2025);
+  const [startYear, setStartYear] = useState(
+    // Find the earliest year in the data
+    Math.min(...emissionsData.map(d => d.year))
+  );
+  const [endYear, setEndYear] = useState(
+    // Find the latest year in the data
+    Math.max(...emissionsData.map(d => d.year))
+  );
   const [chartType, setChartType] = useState('line');
 
-  // State for which data series are toggled on/off
-  const [toggles, setToggles] = useState({
-    scope1: true,
-    scope2: true,
-    scope3: true,
+  // State for which data series are toggled on/off - initialize all to true
+  const [toggles, setToggles] = useState(() => {
+    // Initialize with all toggles on for main scopes
+    const initialToggles = {
+      scope1: true,
+      scope2: true,
+      scope3: true
+    };
+    
+    // Check if we have any subcategories and add them
+    const firstDataPoint = emissionsData[0] || {};
+    Object.keys(firstDataPoint).forEach(key => {
+      if (key.includes('_')) {
+        initialToggles[key] = false; // Start with subcategories off
+      }
+    });
+    
+    return initialToggles;
   });
 
   // Filter data based on selected year range
   const filteredData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    return data.filter(item => item.year >= startYear && item.year <= endYear);
-  }, [data, startYear, endYear]);
+    if (!emissionsData || emissionsData.length === 0) return [];
+    return emissionsData.filter(item => item.year >= startYear && item.year <= endYear);
+  }, [emissionsData, startYear, endYear]);
 
-  // Compute key statistics (Total Emissions and Reduction % over the range, and number of tracked scopes)
+  // Compute key statistics (Total Emissions and Reduction % over the range)
   const stats = useMemo(() => {
+    // Default values
     let totalEmissions = 0;
-    let baselineEmissions = 0;
+    let reductionPercentage = 0;
+    let trackedScopes = 0;
+
     if (filteredData.length > 0) {
       // Sort data by year to ensure we get correct first/last years
       const sorted = [...filteredData].sort((a, b) => a.year - b.year);
       const firstYearData = sorted[0];
       const lastYearData = sorted[sorted.length - 1];
       
-      // Calculate baseline (first year) and total (last year) including only toggled scopes
-      ['scope1', 'scope2', 'scope3'].forEach(scope => {
-        if (toggles[scope]) {
-          baselineEmissions += firstYearData[scope] ?? 0;
-          totalEmissions += lastYearData[scope] ?? 0;
+      // Count tracked scopes
+      trackedScopes = ['scope1', 'scope2', 'scope3'].filter(
+        scope => lastYearData[scope] !== undefined && lastYearData[scope] !== null
+      ).length;
+      
+      // Calculate total emissions for last year (most recent)
+      // Only include toggled scopes in the total
+      totalEmissions = ['scope1', 'scope2', 'scope3'].reduce((total, scope) => {
+        if (toggles[scope] && lastYearData[scope] !== undefined) {
+          return total + (parseFloat(lastYearData[scope]) || 0);
         }
-      });
+        return total;
+      }, 0);
+      
+      // Calculate baseline emissions (first year in range)
+      const baselineEmissions = ['scope1', 'scope2', 'scope3'].reduce((total, scope) => {
+        if (toggles[scope] && firstYearData[scope] !== undefined) {
+          return total + (parseFloat(firstYearData[scope]) || 0);
+        }
+        return total;
+      }, 0);
+      
+      // Calculate reduction percentage (positive means reduction, negative means increase)
+      if (baselineEmissions > 0) {
+        reductionPercentage = ((baselineEmissions - totalEmissions) / baselineEmissions) * 100;
+      }
     }
     
-    const reductionPercentage = baselineEmissions > 0 
-      ? ((baselineEmissions - totalEmissions) / baselineEmissions) * 100 
-      : 0;
-      
-    // Number of scopes being tracked (regardless of toggles – assuming data presence for scope1,2,3)
-    const trackedScopesCount = ['scope1', 'scope2', 'scope3']
-      .filter(scope => data && data.some(item => item[scope] !== undefined))
-      .length;
-      
     return {
       totalEmissions,
       reductionPercentage,
-      trackedScopes: trackedScopesCount
+      trackedScopes
     };
-  }, [filteredData, toggles, data]);
+  }, [filteredData, toggles]);
 
   // Handlers for updating state from subcomponents
   const handleTitleChange = (newTitle) => setTitle(newTitle);
   const handleStartYearChange = (year) => setStartYear(year);
   const handleEndYearChange = (year) => setEndYear(year);
   const handleChartTypeChange = (type) => setChartType(type);
+  
+  // Handle toggle changes for data series
   const handleToggleChange = (seriesKey, value) => {
     setToggles(prev => ({ ...prev, [seriesKey]: value }));
   };
@@ -108,8 +224,17 @@ function EmissionsChart({ data = SAMPLE_DATA }) {
 
   return (
     <Box>
-      {/* Chart controls: title, year range, chart type selector */}
-      <Box mb={2}>
+      {/* Chart Controls */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 2, 
+          mb: 3, 
+          borderRadius: 2,
+          bgcolor: alpha(theme.palette.background.paper, 0.5),
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+        }}
+      >
         <ChartControls 
           title={title}
           startYear={startYear}
@@ -120,19 +245,26 @@ function EmissionsChart({ data = SAMPLE_DATA }) {
           onEndYearChange={handleEndYearChange}
           onChartTypeChange={handleChartTypeChange}
         />
-      </Box>
+      </Paper>
 
-      {/* Emissions statistics cards */}
-      <Box mb={2}>
-        <EmissionsStats 
-          totalEmissions={stats.totalEmissions}
-          reductionPercentage={stats.reductionPercentage}
-          trackedScopes={stats.trackedScopes}
-        />
-      </Box>
+      {/* Emissions Statistics */}
+      <EmissionsStats 
+        totalEmissions={stats.totalEmissions}
+        reductionPercentage={stats.reductionPercentage}
+        trackedScopes={stats.trackedScopes}
+      />
 
-      {/* Chart renderer (displays the chart based on type and filtered data) */}
-      <Box mb={2}>
+      {/* Chart Renderer */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 3, 
+          mb: 3, 
+          borderRadius: 2,
+          bgcolor: alpha(theme.palette.background.paper, 0.5),
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+        }}
+      >
         <ChartRenderer 
           title={title}
           chartType={chartType}
@@ -140,12 +272,23 @@ function EmissionsChart({ data = SAMPLE_DATA }) {
           toggles={toggles}
           seriesColors={FIXED_SERIES_COLORS}
         />
-      </Box>
+      </Paper>
 
-      {/* Data series toggles (checkboxes to show/hide series) */}
-      <Box mb={2}>
-        <DataToggles toggles={toggles} onToggleChange={handleToggleChange} />
-      </Box>
+      {/* Data Toggles */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 2, 
+          borderRadius: 2,
+          bgcolor: alpha(theme.palette.background.paper, 0.5),
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+        }}
+      >
+        <DataToggles 
+          toggles={toggles} 
+          onToggleChange={handleToggleChange} 
+        />
+      </Paper>
     </Box>
   );
 }
